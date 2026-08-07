@@ -1,0 +1,26 @@
+name: churn
+task: classification
+source_datasets:
+  - customers
+  - usage_events
+  - support_tickets
+features:
+  builder: churn_feature_builder
+  schema: churn_feature_schema_v1
+  version: churn.features.v1
+  contract: churn_feature_contract_v1
+evaluation:
+  metrics:
+    - auc
+    - f1
+    - accuracy
+promotion_policy:
+  metric: auc
+  threshold: 0.02
+serving:
+  endpoint: churn_model_endpoint
+retrieval:
+  vector_indexes:
+    - notes_vs
+    - tickets_vs
+    - playbooks_vs

@@ -1,0 +1,12 @@
+name: mlworkflow
+targets:
+  - dev
+  - test
+  - prod
+permissions:
+  - catalog: mlworkflow_dev
+    role: ml_engineer
+  - catalog: mlworkflow_test
+    role: ml_engineer
+  - catalog: mlworkflow_prod
+    role: ml_release_manager

@@ -64,7 +64,11 @@ with mlflow.start_run(run_name="churn-logistic-regression") as run:
         "auc": float(roc_auc_score(y_test, probabilities)),
     }
     mlflow.log_params(
-        {"task_type": "classification", "feature_schema_version": "churn.features.v1"}
+        {
+            "task_type": "classification",
+            "feature_schema_version": "churn.features.v1",
+            "feature_contract": "churn_feature_contract_v1",
+        }
     )
     mlflow.log_metrics(metrics)
     mlflow.set_tags(
@@ -81,6 +85,7 @@ with mlflow.start_run(run_name="churn-logistic-regression") as run:
             "label_table": f"{catalog}.gold.churn_labels",
             "row_count": row_count,
             "feature_schema_version": "churn.features.v1",
+            "feature_contract": "churn_feature_contract_v1",
             "trained_at": datetime.now(UTC).isoformat(),
         },
         "training_context.json",

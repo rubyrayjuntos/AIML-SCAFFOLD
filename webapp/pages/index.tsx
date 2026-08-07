@@ -15,7 +15,8 @@ export default function Home() {
   async function loadScore() {
     const response = await fetch(`/api/v1/score?customer_id=${encodeURIComponent(customerId)}`);
     if (!response.ok) throw new Error("Unable to load score");
-    setScore((await response.json()) as Score);
+    const envelope = (await response.json()) as { data: Score };
+    setScore(envelope.data);
   }
 
   return (

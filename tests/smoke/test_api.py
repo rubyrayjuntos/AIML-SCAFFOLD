@@ -8,7 +8,9 @@ client = TestClient(app)
 def test_score_contract_is_server_derived() -> None:
     response = client.get("/api/v1/score", params={"customer_id": "7590-VHVEG"})
     assert response.status_code == 200
-    assert response.json()["entity_id"] == "7590-VHVEG"
+    assert response.json()["status"] == "success"
+    assert response.json()["source"] == "/api/v1/score"
+    assert response.json()["data"]["entity_id"] == "7590-VHVEG"
     assert "request_id" in response.json()
 
 

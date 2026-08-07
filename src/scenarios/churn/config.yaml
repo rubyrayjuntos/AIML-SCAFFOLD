@@ -4,6 +4,7 @@ source_dataset: telco_customer_churn_v1
 source_url: https://raw.githubusercontent.com/IBM/telco-customer-churn-on-icp4d/master/data/Telco-Customer-Churn.csv
 expected_customer_count: 7043
 feature_schema_version: churn.features.v1
+feature_contract: churn_feature_contract_v1
 catalogs:
   dev: mlworkflow_dev
   test: mlworkflow_test

@@ -10,11 +10,13 @@ from platform_core.contracts.models import (
     AssistantRequest,
     AssistantResponse,
     Evidence,
+    ResponseEnvelope,
     ScoreResponse,
     SnapshotDelta,
 )
 
 app = FastAPI(title="Enterprise ML Workflow API", version="1.0.0")
+API_CONTRACT_VERSION = "2026-08-07"
 
 
 def request_id() -> str:
@@ -30,6 +32,8 @@ def _score(entity_id: str, rid: str) -> ScoreResponse:
         drivers={"reference_signal": 0.0},
         model_version="unavailable",
         served_version="unavailable",
+        feature_version="unavailable",
+        feature_contract="unavailable",
         request_id=rid,
     )
 
@@ -48,10 +52,11 @@ async def http_error(request: Request, exc: HTTPException):
     return JSONResponse(
         status_code=exc.status_code,
         content={
-            "error": "request_error",
-            "message": str(exc.detail),
             "request_id": request.state.request_id,
-            "details": {},
+            "source": str(request.url.path),
+            "version": API_CONTRACT_VERSION,
+            "status": "error",
+            "data": {"error": "request_error", "message": str(exc.detail)},
         },
     )
 
@@ -61,32 +66,50 @@ def healthz() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.get("/api/v1/score", response_model=ScoreResponse)
-def score(customer_id: str = Query(min_length=1), request: Request = None) -> ScoreResponse:
-    return _score(customer_id, request.state.request_id)
+@app.get("/api/v1/score", response_model=ResponseEnvelope[ScoreResponse])
+def score(
+    customer_id: str = Query(min_length=1), request: Request = None
+) -> ResponseEnvelope[ScoreResponse]:
+    result = _score(customer_id, request.state.request_id)
+    return ResponseEnvelope(
+        request_id=result.request_id,
+        source="/api/v1/score",
+        version=API_CONTRACT_VERSION,
+        status="success",
+        data=result,
+    )
 
 
-@app.get("/api/v1/diff", response_model=SnapshotDelta)
+@app.get("/api/v1/diff", response_model=ResponseEnvelope[SnapshotDelta])
 def diff(
     customer_id: str = Query(min_length=1),
     window: str = Query(default="30d", pattern=r"^(7d|30d|90d)$"),
     request: Request = None,
-) -> SnapshotDelta:
+) -> ResponseEnvelope[SnapshotDelta]:
     rid = request.state.request_id
     days = int(window[:-1])
-    return SnapshotDelta(
+    result = SnapshotDelta(
         current_snapshot=date.today(),
         previous_snapshot=date.today() - timedelta(days=days),
         deltas={"reference_signal": 0.0},
         request_id=rid,
     )
+    return ResponseEnvelope(
+        request_id=rid,
+        source="/api/v1/diff",
+        version=API_CONTRACT_VERSION,
+        status="success",
+        data=result,
+    )
 
 
-@app.post("/api/v1/assistant", response_model=AssistantResponse)
-def assistant(payload: AssistantRequest, request: Request = None) -> AssistantResponse:
+@app.post("/api/v1/assistant", response_model=ResponseEnvelope[AssistantResponse])
+def assistant(
+    payload: AssistantRequest, request: Request = None
+) -> ResponseEnvelope[AssistantResponse]:
     rid = request.state.request_id
     _score(payload.entity_id, rid)  # authoritative context is derived server-side
-    return AssistantResponse(
+    result = AssistantResponse(
         entity_id=payload.entity_id,
         risk_explanation=(
             "No live model or Foundry deployment is configured in this reference process."
@@ -103,4 +126,11 @@ def assistant(payload: AssistantRequest, request: Request = None) -> AssistantRe
         model_version="unavailable",
         response_source="deterministic_fallback",
         request_id=rid,
+    )
+    return ResponseEnvelope(
+        request_id=rid,
+        source="/api/v1/assistant",
+        version=API_CONTRACT_VERSION,
+        status="success",
+        data=result,
     )

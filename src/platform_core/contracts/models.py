@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Any, Literal
+from typing import Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -28,6 +28,27 @@ class EvaluationResult(BaseModel):
     gate_reasons: list[str] = Field(default_factory=list)
 
 
+class FeatureRegistryEntry(BaseModel):
+    """Governed identity for a feature schema and its producing contract."""
+
+    feature_version: str = Field(min_length=1)
+    feature_contract: str = Field(min_length=1)
+    feature_schema: dict[str, str]
+    builder: str = Field(min_length=1)
+    source_datasets: list[str] = Field(min_length=1)
+
+
+T = TypeVar("T")
+
+
+class ResponseEnvelope(BaseModel, Generic[T]):
+    request_id: str
+    source: str
+    version: str
+    status: Literal["success", "error"]
+    data: T
+
+
 class ModelCandidate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -44,6 +65,8 @@ class ScoreResponse(BaseModel):
     drivers: dict[str, float | int | str]
     model_version: str
     served_version: str
+    feature_version: str
+    feature_contract: str
     request_id: str
 
 
