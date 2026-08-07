@@ -1,0 +1,29 @@
+resources:
+  jobs:
+    churn_training:
+      name: ${bundle.target}-churn-training
+      tasks:
+        - task_key: ingest_bronze
+          notebook_task:
+            notebook_path: ../../notebooks/01_ingest_telco.py
+            base_parameters:
+              catalog: ${var.catalog}
+        - task_key: build_silver
+          depends_on: [{task_key: ingest_bronze}]
+          notebook_task:
+            notebook_path: ../../notebooks/02_build_silver.py
+            base_parameters:
+              catalog: ${var.catalog}
+        - task_key: build_gold
+          depends_on: [{task_key: build_silver}]
+          notebook_task:
+            notebook_path: ../../notebooks/03_build_gold.py
+            base_parameters:
+              catalog: ${var.catalog}
+        - task_key: train
+          depends_on: [{task_key: build_gold}]
+          notebook_task:
+            notebook_path: ../../notebooks/04_train_classification.py
+            base_parameters:
+              catalog: ${var.catalog}
+              environment: ${var.environment}

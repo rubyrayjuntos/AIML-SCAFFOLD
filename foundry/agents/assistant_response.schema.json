@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "required": ["risk_explanation", "what_changed", "recommended_action", "evidence"],
+  "properties": {
+    "risk_explanation": {"type": "string"},
+    "what_changed": {"type": "string"},
+    "recommended_action": {"type": "string"},
+    "evidence": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}

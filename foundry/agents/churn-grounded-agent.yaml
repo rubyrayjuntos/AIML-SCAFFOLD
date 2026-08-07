@@ -1,0 +1,13 @@
+name: churn-grounded-agent
+description: Explain an authoritative churn score using approved evidence and playbooks.
+tools:
+  - get_customer_score
+  - get_customer_diff
+  - retrieve_customer_evidence
+  - retrieve_playbooks
+output_schema: foundry/agents/assistant_response.schema.json
+guardrails:
+  require_citations: true
+  allow_arbitrary_sql: false
+  allow_data_mutation: false
+  response_source_required: true

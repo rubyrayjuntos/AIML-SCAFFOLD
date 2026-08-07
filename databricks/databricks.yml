@@ -1,0 +1,27 @@
+bundle:
+  name: enterprise-ml-workflow
+
+include:
+  - bundles/resources/*.yml
+
+variables:
+  catalog:
+    default: mlworkflow_dev
+  environment:
+    default: dev
+
+targets:
+  dev:
+    mode: development
+    default: true
+    variables:
+      catalog: mlworkflow_dev
+      environment: dev
+  test:
+    variables:
+      catalog: mlworkflow_test
+      environment: test
+  prod:
+    variables:
+      catalog: mlworkflow_prod
+      environment: prod

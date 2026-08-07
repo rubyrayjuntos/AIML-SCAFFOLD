@@ -1,0 +1,18 @@
+scenario: churn
+task_type: classification
+source_dataset: telco_customer_churn_v1
+source_url: https://raw.githubusercontent.com/IBM/telco-customer-churn-on-icp4d/master/data/Telco-Customer-Churn.csv
+expected_customer_count: 7043
+feature_schema_version: churn.features.v1
+catalogs:
+  dev: mlworkflow_dev
+  test: mlworkflow_test
+  prod: mlworkflow_prod
+schemas: [bronze, silver, gold, ml, ops]
+model:
+  name: churn_classifier
+  primary_metric: f1
+  minimum_improvement: 0.01
+  minimum_rows: 7043
+  candidate_models: [logistic_regression, random_forest]
+playbooks_table: gold.recommended_actions

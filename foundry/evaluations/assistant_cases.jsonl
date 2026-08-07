@@ -1,0 +1,2 @@
+{"case_id":"high-risk-usage-drop","required_evidence_types":["metric","ticket"],"must_cite":true,"must_not_mutate":true}
+{"case_id":"stable-customer","required_evidence_types":["metric"],"must_cite":true,"must_not_mutate":true}

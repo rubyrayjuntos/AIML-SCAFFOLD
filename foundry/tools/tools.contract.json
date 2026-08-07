@@ -1,0 +1,24 @@
+{
+  "tools": [
+    {
+      "name": "get_customer_score",
+      "mutates_data": false,
+      "authorization": "application-service-identity"
+    },
+    {
+      "name": "get_customer_diff",
+      "mutates_data": false,
+      "authorization": "application-service-identity"
+    },
+    {
+      "name": "retrieve_customer_evidence",
+      "mutates_data": false,
+      "authorization": "read-approved-gold-context"
+    },
+    {
+      "name": "retrieve_playbooks",
+      "mutates_data": false,
+      "authorization": "read-approved-gold-playbooks"
+    }
+  ]
+}
