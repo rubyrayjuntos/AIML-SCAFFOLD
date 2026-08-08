@@ -1,0 +1,16 @@
+profile_version: 1
+environment: prod
+created: 2026-08-07
+modified: 2026-08-07
+owner: Ray Swan / Codex
+notes: Hardened production profile; private connectivity and approval are required.
+azure:
+  location: eastus
+  resource_group: rg-aiml-scaffold-prod
+  subscription_id: ${AZURE_SUBSCRIPTION_ID}
+  tenant_id: ${AZURE_TENANT_ID}
+  secure_network: true
+catalog: mlworkflow_prod
+key_vault: mlwf-prod-kv
+databricks_target: prod
+foundry_project: mlworkflow-prod

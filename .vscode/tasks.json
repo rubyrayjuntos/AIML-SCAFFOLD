@@ -1,0 +1,51 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "ML workflow: test",
+      "type": "shell",
+      "command": "pytest",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "ML workflow: lint",
+      "type": "shell",
+      "command": "ruff check .",
+      "problemMatcher": []
+    },
+    {
+      "label": "ML workflow: validate Azure context",
+      "type": "shell",
+      "command": "./scripts/validate-azure-context.sh ${input:environment}",
+      "problemMatcher": []
+    },
+    {
+      "label": "ML workflow: Bicep build",
+      "type": "shell",
+      "command": "az bicep build --file infra/bicep/main.bicep",
+      "problemMatcher": []
+    },
+    {
+      "label": "ML workflow: Terraform validate",
+      "type": "shell",
+      "command": "terraform -chdir=infra/terraform validate",
+      "problemMatcher": []
+    },
+    {
+      "label": "ML workflow: Databricks Bundle validate",
+      "type": "shell",
+      "command": "DATABRICKS_BUNDLE_ROOT=databricks databricks bundle validate -t ${input:environment}",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "environment",
+      "type": "pickString",
+      "description": "Environment profile",
+      "options": ["dev", "test", "prod"],
+      "default": "dev"
+    }
+  ]
+}

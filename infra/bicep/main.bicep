@@ -13,6 +13,8 @@ param secureNetworkEnabled bool = false
 
 var namePrefix = 'mlwf-${environment}-${uniqueSuffix}'
 var blobDnsZoneName = 'privatelink.blob.${az.environment().suffixes.storage}'
+var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
+var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
 
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: '${namePrefix}-logs'
@@ -59,6 +61,26 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     enablePurgeProtection: profile == 'prod'
     publicNetworkAccess: secureNetworkEnabled ? 'Disabled' : 'Enabled'
     sku: { family: 'A', name: 'standard' }
+  }
+}
+
+resource workloadKeyVaultRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(resourceGroup().id, keyVault.name, identity.name, keyVaultSecretsUserRoleId)
+  scope: keyVault
+  properties: {
+    principalId: identity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
+  }
+}
+
+resource workloadStorageRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(resourceGroup().id, storage.name, identity.name, storageBlobDataContributorRoleId)
+  scope: storage
+  properties: {
+    principalId: identity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributorRoleId)
   }
 }
 

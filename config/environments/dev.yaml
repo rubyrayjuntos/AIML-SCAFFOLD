@@ -1,0 +1,16 @@
+profile_version: 1
+environment: dev
+created: 2026-08-07
+modified: 2026-08-07
+owner: Ray Swan / Codex
+notes: Lower-cost development profile; public endpoints are explicit tradeoffs.
+azure:
+  location: eastus
+  resource_group: rg-aiml-scaffold-dev
+  subscription_id: ${AZURE_SUBSCRIPTION_ID}
+  tenant_id: ${AZURE_TENANT_ID}
+  secure_network: false
+catalog: mlworkflow_dev
+key_vault: mlwf-dev-kv
+databricks_target: dev
+foundry_project: mlworkflow-dev

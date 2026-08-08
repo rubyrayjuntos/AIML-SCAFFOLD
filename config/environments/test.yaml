@@ -1,0 +1,16 @@
+profile_version: 1
+environment: test
+created: 2026-08-07
+modified: 2026-08-07
+owner: Ray Swan / Codex
+notes: Production-shaped integration profile with isolated data and model state.
+azure:
+  location: eastus
+  resource_group: rg-aiml-scaffold-test
+  subscription_id: ${AZURE_SUBSCRIPTION_ID}
+  tenant_id: ${AZURE_TENANT_ID}
+  secure_network: true
+catalog: mlworkflow_test
+key_vault: mlwf-test-kv
+databricks_target: test
+foundry_project: mlworkflow-test
