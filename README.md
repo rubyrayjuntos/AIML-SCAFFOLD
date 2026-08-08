@@ -27,6 +27,7 @@ Azure resources are authored in Bicep. Terraform is a separate portability imple
 - [Churn evaluation](docs/scenarios/churn/evaluation.md)
 - [Churn demo runbook](docs/scenarios/churn/demo-runbook.md)
 - [Development tooling and context servers](docs/template/tooling.md)
+- [Identity, Key Vault, and environment profiles](docs/template/identity-and-environments.md)
 
 The repository is a reusable template first. Churn is a reference scenario built on top of the template; scenario-specific assumptions must not leak into `platform_core`.
 
