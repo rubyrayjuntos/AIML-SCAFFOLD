@@ -57,5 +57,6 @@ This initial scaffold establishes the contracts and deployment boundaries. Azure
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 0.3.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Added committed VS Code workspace, environment profiles, and identity setup guidance. |
 | 0.2.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Added template/scenario documentation boundary and documentation map. |
 | 0.1.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Initial repository orientation. |
