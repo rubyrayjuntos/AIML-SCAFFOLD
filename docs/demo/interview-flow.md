@@ -9,3 +9,9 @@
 7. Open a customer drill-down with score, drivers, and 30-day change.
 8. Invoke the Foundry grounded agent and inspect citations and recommended playbook action.
 9. Show GitHub Actions, Bicep/DAB validation, deployment evidence, and monitoring signals.
+
+## Documentation changelog
+
+| Version | Created | Modified | Who | Notes |
+|---|---|---|---|---|
+| 0.1.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Initial interview demonstration flow. |

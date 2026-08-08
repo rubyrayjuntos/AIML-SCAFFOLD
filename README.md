@@ -12,6 +12,23 @@ The supported path is:
 
 Azure resources are authored in Bicep. Terraform is a separate portability implementation and must not manage the same resource group. Databricks code is delivered with Asset Bundles. Foundry is used for grounded, structured explanations over application-approved tools.
 
+## Documentation map
+
+- [Template architecture](docs/template/architecture.md)
+- [Template configuration](docs/template/configuration.md)
+- [Extension guide](docs/template/extension-guide.md)
+- [Deployment guide](docs/template/deployment.md)
+- [Template lifecycle](docs/template/lifecycle.md)
+- [Resource ownership](docs/architecture/resource-ownership.md)
+- [Environment strategy](docs/architecture/environment-strategy.md)
+- [Churn scenario](docs/scenarios/churn/README.md)
+- [Churn data contract](docs/scenarios/churn/data-contract.md)
+- [Churn feature catalog](docs/scenarios/churn/feature-catalog.md)
+- [Churn evaluation](docs/scenarios/churn/evaluation.md)
+- [Churn demo runbook](docs/scenarios/churn/demo-runbook.md)
+
+The repository is a reusable template first. Churn is a reference scenario built on top of the template; scenario-specific assumptions must not leak into `platform_core`.
+
 ## Local validation
 
 ```bash
@@ -33,3 +50,10 @@ The scenario uses the canonical 7,043-record Telco Customer Churn corpus. The so
 ## Status
 
 This initial scaffold establishes the contracts and deployment boundaries. Azure resource deployment, Databricks workspace configuration, Foundry resource binding, and live model registration are explicit environment steps and are not performed by local tests.
+
+## Documentation changelog
+
+| Version | Created | Modified | Who | Notes |
+|---|---|---|---|---|
+| 0.2.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Added template/scenario documentation boundary and documentation map. |
+| 0.1.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Initial repository orientation. |

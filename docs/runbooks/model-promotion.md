@@ -11,3 +11,9 @@
 9. Run score, API, and Foundry smoke tests.
 
 Model versions are never silently renumbered or overwritten. Retention/deletion is a separate reviewed operation.
+
+## Documentation changelog
+
+| Version | Created | Modified | Who | Notes |
+|---|---|---|---|---|
+| 0.1.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Initial model promotion runbook. |
