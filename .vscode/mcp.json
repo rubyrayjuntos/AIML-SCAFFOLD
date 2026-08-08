@@ -1,0 +1,44 @@
+{
+  "servers": {
+    "com.microsoft/azure": {
+      "type": "stdio",
+      "command": "dnx",
+      "args": [
+        "Azure.Mcp@3.0.0-beta.6",
+        "--yes",
+        "--",
+        "server",
+        "start"
+      ]
+    },
+    "foundry-mcp-remote": {
+      "type": "http",
+      "url": "https://mcp.ai.azure.com"
+    },
+    "microsoft/azure-devops-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@azure-devops/mcp@latest",
+        "${input:ado_org}",
+        "-d",
+        "${input:ado_domain}"
+      ]
+    }
+  },
+  "inputs": [
+    {
+      "id": "ado_org",
+      "type": "promptString",
+      "description": "Azure DevOps organization name.",
+      "password": false
+    },
+    {
+      "id": "ado_domain",
+      "type": "promptString",
+      "description": "Azure DevOps domains/toolsets to enable.",
+      "password": false
+    }
+  ]
+}
