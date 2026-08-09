@@ -27,7 +27,7 @@ class ScenarioFeatures(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     builder: str = Field(min_length=1)
-    schema: str = Field(min_length=1)
+    schema_name: str = Field(min_length=1, alias="schema")
     version: str = Field(min_length=1)
     contract: str = Field(min_length=1)
 
