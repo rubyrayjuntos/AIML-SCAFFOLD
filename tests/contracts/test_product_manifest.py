@@ -1,12 +1,15 @@
+import json
 from pathlib import Path
 
 import pytest
+import yaml
 from pydantic import ValidationError
 
 from platform_core.contracts.product_manifest import (
     AgentYaml,
     ConfigYaml,
     ProductIdentity,
+    ProductManifest,
     RoutingEntry,
     ScenarioEvaluation,
     ScenarioFeatures,
@@ -18,6 +21,7 @@ from platform_core.contracts.product_manifest import (
     SecurityPosture,
     ToolsContract,
     VectorIndex,
+    discover_scenario_dir,
     discover_single_file,
     discover_single_subdir,
 )
@@ -124,3 +128,193 @@ def test_discover_single_file_requires_exactly_one(tmp_path: Path) -> None:
     (tmp_path / "other.yaml").write_text("name: y")
     with pytest.raises(ValueError, match="expected exactly one file"):
         discover_single_file(tmp_path, "*.yaml")
+
+
+def _write_synthetic_manifest(tmp_path: Path) -> tuple[Path, Path]:
+    scenario_dir = tmp_path / "src" / "scenarios" / "widgets"
+    scenario_dir.mkdir(parents=True)
+    foundry_dir = tmp_path / "foundry"
+    (foundry_dir / "agents").mkdir(parents=True)
+    (foundry_dir / "tools").mkdir(parents=True)
+
+    (scenario_dir / "product.yaml").write_text(
+        yaml.dump(
+            {
+                "product": {
+                    "name": "widgets",
+                    "display_name": "Widgets",
+                    "manifest_version": "1.0",
+                },
+                "environments": ["dev", "prod"],
+                "security": {
+                    "dev": {"agent_data_access": "mediated"},
+                    "prod": {"agent_data_access": "mediated"},
+                },
+            }
+        )
+    )
+    (scenario_dir / "scenario.yaml").write_text(
+        yaml.dump(
+            {
+                "name": "widgets",
+                "task": "classification",
+                "source_datasets": ["orders"],
+                "features": {
+                    "builder": "widgets_feature_builder",
+                    "schema": "widgets_feature_schema_v1",
+                    "version": "widgets.features.v1",
+                    "contract": "widgets_feature_contract_v1",
+                },
+                "model": {
+                    "name": "widgets_classifier",
+                    "candidate_models": ["logistic_regression"],
+                    "minimum_rows": 100,
+                },
+                "evaluation": {"metrics": ["auc"]},
+                "promotion_policy": {"metric": "auc", "threshold": 0.01},
+                "serving": {"endpoint": "widgets-model-endpoint"},
+                "retrieval": {
+                    "vector_indexes": [
+                        {
+                            "name": "notes_vs",
+                            "source_table": "gold.notes",
+                            "used_by": ["retrieve_notes"],
+                        }
+                    ]
+                },
+            }
+        )
+    )
+    (scenario_dir / "config.yaml").write_text(
+        yaml.dump(
+            {
+                "scenario": "widgets",
+                "source_dataset": "widgets_v1",
+                "source_url": "https://example.com/widgets.csv",
+                "expected_customer_count": 100,
+                "catalogs": {"dev": "widgets_dev", "prod": "widgets_prod"},
+                "schemas": ["bronze", "silver", "gold"],
+                "playbooks_table": "gold.recommended_actions",
+            }
+        )
+    )
+    (scenario_dir / "routing.yaml").write_text(
+        yaml.dump(
+            {
+                "dev": {"primary": "gpt-4o-mini", "fallback": []},
+                "prod": {"primary": "gpt-4o", "fallback": ["gpt-4o-mini"]},
+            }
+        )
+    )
+    (foundry_dir / "agents" / "widgets-grounded-agent.yaml").write_text(
+        yaml.dump(
+            {
+                "name": "widgets-grounded-agent",
+                "description": "Explain a widgets score",
+                "tools": ["retrieve_notes"],
+                "output_schema": "foundry/agents/assistant_response.schema.json",
+                "guardrails": {"require_citations": True},
+            }
+        )
+    )
+    (foundry_dir / "tools" / "tools.contract.json").write_text(
+        json.dumps(
+            {
+                "tools": [
+                    {
+                        "name": "retrieve_notes",
+                        "mutates_data": False,
+                        "authorization": "read-approved-gold-context",
+                    }
+                ]
+            }
+        )
+    )
+    return scenario_dir, foundry_dir
+
+
+def test_product_manifest_loads_a_valid_synthetic_product(tmp_path: Path) -> None:
+    scenario_dir, foundry_dir = _write_synthetic_manifest(tmp_path)
+
+    manifest = ProductManifest.load(scenario_dir, foundry_dir=foundry_dir)
+
+    assert manifest.product.name == "widgets"
+    assert manifest.routing["prod"].primary == "gpt-4o"
+    assert manifest.scenario.model.minimum_rows == 100
+
+
+def test_product_manifest_rejects_unsupported_version(tmp_path: Path) -> None:
+    scenario_dir, foundry_dir = _write_synthetic_manifest(tmp_path)
+    product_yaml = scenario_dir / "product.yaml"
+    data = yaml.safe_load(product_yaml.read_text())
+    data["product"]["manifest_version"] = "2.0"
+    product_yaml.write_text(yaml.dump(data))
+
+    with pytest.raises(ValidationError, match="manifest_version"):
+        ProductManifest.load(scenario_dir, foundry_dir=foundry_dir)
+
+
+def test_product_manifest_requires_security_for_every_declared_environment(tmp_path: Path) -> None:
+    scenario_dir, foundry_dir = _write_synthetic_manifest(tmp_path)
+    product_yaml = scenario_dir / "product.yaml"
+    data = yaml.safe_load(product_yaml.read_text())
+    del data["security"]["prod"]
+    product_yaml.write_text(yaml.dump(data))
+
+    with pytest.raises(ValidationError, match="security"):
+        ProductManifest.load(scenario_dir, foundry_dir=foundry_dir)
+
+
+def test_product_manifest_rejects_direct_agent_data_access_in_prod(tmp_path: Path) -> None:
+    scenario_dir, foundry_dir = _write_synthetic_manifest(tmp_path)
+    product_yaml = scenario_dir / "product.yaml"
+    data = yaml.safe_load(product_yaml.read_text())
+    data["security"]["prod"]["agent_data_access"] = "direct"
+    product_yaml.write_text(yaml.dump(data))
+
+    with pytest.raises(ValidationError, match="agent_data_access"):
+        ProductManifest.load(scenario_dir, foundry_dir=foundry_dir)
+
+
+def test_product_manifest_allows_direct_agent_data_access_in_dev(tmp_path: Path) -> None:
+    scenario_dir, foundry_dir = _write_synthetic_manifest(tmp_path)
+    product_yaml = scenario_dir / "product.yaml"
+    data = yaml.safe_load(product_yaml.read_text())
+    data["security"]["dev"]["agent_data_access"] = "direct"
+    product_yaml.write_text(yaml.dump(data))
+
+    manifest = ProductManifest.load(scenario_dir, foundry_dir=foundry_dir)
+    assert manifest.security["dev"].agent_data_access == "direct"
+
+
+def test_product_manifest_rejects_orphaned_vector_index(tmp_path: Path) -> None:
+    scenario_dir, foundry_dir = _write_synthetic_manifest(tmp_path)
+    scenario_yaml = scenario_dir / "scenario.yaml"
+    data = yaml.safe_load(scenario_yaml.read_text())
+    data["retrieval"]["vector_indexes"][0]["used_by"] = ["unknown_tool"]
+    scenario_yaml.write_text(yaml.dump(data))
+
+    with pytest.raises(ValidationError, match="unknown tool"):
+        ProductManifest.load(scenario_dir, foundry_dir=foundry_dir)
+
+
+def test_product_manifest_rejects_retrieval_tool_with_no_backing_index(tmp_path: Path) -> None:
+    scenario_dir, foundry_dir = _write_synthetic_manifest(tmp_path)
+    tools_path = foundry_dir / "tools" / "tools.contract.json"
+    data = json.loads(tools_path.read_text())
+    data["tools"].append(
+        {
+            "name": "retrieve_playbooks",
+            "mutates_data": False,
+            "authorization": "read-approved-gold-playbooks",
+        }
+    )
+    tools_path.write_text(json.dumps(data))
+
+    with pytest.raises(ValidationError, match="not referenced by any vector index"):
+        ProductManifest.load(scenario_dir, foundry_dir=foundry_dir)
+
+
+def test_discover_scenario_dir_finds_the_single_scenario(tmp_path: Path) -> None:
+    scenario_dir, _ = _write_synthetic_manifest(tmp_path)
+    assert discover_scenario_dir(scenario_dir.parent) == scenario_dir
