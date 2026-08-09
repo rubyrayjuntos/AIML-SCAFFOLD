@@ -17,6 +17,7 @@
 - Pydantic models use `model_config = ConfigDict(extra="forbid")`, matching the existing convention in `src/platform_core/contracts/models.py`.
 - Ruff: line-length 100, target py312. Run `ruff check .` and `pytest` before every commit (per `AGENTS.md`).
 - Ran from repo root; all relative paths in code (`Path("src/scenarios")`, `Path("foundry")`) assume CWD is the repo root, matching the existing pattern in `tests/data_quality/test_churn_config.py`.
+- `ScenarioFeatures`' Python attribute is `schema_name`, aliased to the YAML key `schema` (`Field(min_length=1, alias="schema")`) — the bare name `schema` collides with a deprecated `BaseModel` attribute and warns on every use. Construction and YAML loading both use the alias (`schema=...` as a kwarg, or the `schema` dict key), so no other code changes; only the field declaration differs from a plain `schema: str` (found and corrected during Task 1's review, 2026-08-08).
 
 ---
 
@@ -218,7 +219,7 @@ class ScenarioFeatures(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     builder: str = Field(min_length=1)
-    schema: str = Field(min_length=1)
+    schema_name: str = Field(min_length=1, alias="schema")
     version: str = Field(min_length=1)
     contract: str = Field(min_length=1)
 
