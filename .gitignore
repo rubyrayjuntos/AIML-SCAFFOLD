@@ -16,3 +16,4 @@ build/
 infra/bicep/*.json
 node_modules/
 .next/
+.worktrees/
