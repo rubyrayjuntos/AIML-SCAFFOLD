@@ -11,6 +11,9 @@ gold = silver.select(
     "MonthlyCharges",
     "TotalCharges",
     "SeniorCitizen",
+    "Contract",
+    "InternetService",
+    "TechSupport",
     "churned",
 )
 gold.write.mode("overwrite").option("overwriteSchema", True).saveAsTable(

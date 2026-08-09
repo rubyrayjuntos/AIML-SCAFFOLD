@@ -39,3 +39,8 @@ def test_invalid_feature_domain_is_rejected() -> None:
 def test_assistant_does_not_accept_client_score_or_drivers() -> None:
     with pytest.raises(ValidationError):
         AssistantRequest(entity_id="7590-VHVEG", score=0.9, drivers={})
+
+
+def test_assistant_does_not_accept_client_evidence() -> None:
+    with pytest.raises(ValidationError):
+        AssistantRequest(entity_id="7590-VHVEG", evidence=[{"source_id": "client"}])

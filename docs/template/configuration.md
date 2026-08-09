@@ -31,6 +31,8 @@ Each scenario supplies:
 
 The canonical example is [the churn scenario manifest](../scenarios/churn/scenario.yaml).
 
+For the local dev scoring adapter, `DATABRICKS_SQL_WAREHOUSE_ID` identifies the project-owned SQL warehouse used to read governed Gold features. Authentication continues to use the active Databricks CLI/default credential chain; no token is stored in configuration.
+
 ## Secret handling
 
 Configuration may reference secrets by Key Vault name or secret reference, but must never contain secret values, tokens, connection strings, or personal access credentials.
@@ -39,4 +41,5 @@ Configuration may reference secrets by Key Vault name or secret reference, but m
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 0.2.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Documented the dev serving adapter warehouse and normalized endpoint configuration. |
 | 0.1.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Initial configuration contract. |

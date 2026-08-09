@@ -58,7 +58,9 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     tenantId: tenantId
     enableRbacAuthorization: true
     enableSoftDelete: true
-    enablePurgeProtection: profile == 'prod'
+    // Azure rejects an explicit false value for this irreversible setting.
+    // Omit it outside production; production enables it deliberately.
+    enablePurgeProtection: profile == 'prod' ? true : null
     publicNetworkAccess: secureNetworkEnabled ? 'Disabled' : 'Enabled'
     sku: { family: 'A', name: 'standard' }
   }

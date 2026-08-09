@@ -2,28 +2,52 @@ resources:
   jobs:
     churn_training:
       name: ${bundle.target}-churn-training
+      environments:
+        - environment_key: churn_runtime
+          spec:
+            client: "1"
+            dependencies:
+              - "mlflow>=2.14,<4"
+              - "pandas>=2.2,<3"
+              - "scikit-learn>=1.5,<2"
       tasks:
+        - task_key: bootstrap_catalog
+          environment_key: churn_runtime
+          notebook_task:
+            notebook_path: ../../notebooks/00_bootstrap_catalog.py
+            base_parameters:
+              catalog: ${var.catalog}
         - task_key: ingest_bronze
+          environment_key: churn_runtime
+          depends_on: [{task_key: bootstrap_catalog}]
           notebook_task:
             notebook_path: ../../notebooks/01_ingest_telco.py
             base_parameters:
               catalog: ${var.catalog}
         - task_key: build_silver
+          environment_key: churn_runtime
           depends_on: [{task_key: ingest_bronze}]
           notebook_task:
             notebook_path: ../../notebooks/02_build_silver.py
             base_parameters:
               catalog: ${var.catalog}
         - task_key: build_gold
+          environment_key: churn_runtime
           depends_on: [{task_key: build_silver}]
           notebook_task:
             notebook_path: ../../notebooks/03_build_gold.py
             base_parameters:
               catalog: ${var.catalog}
         - task_key: train
+          environment_key: churn_runtime
           depends_on: [{task_key: build_gold}]
           notebook_task:
             notebook_path: ../../notebooks/04_train_classification.py
             base_parameters:
               catalog: ${var.catalog}
               environment: ${var.environment}
+              promotion_metric: auc
+              minimum_improvement: "0.02"
+              minimum_rows: "7043"
+              feature_schema_version: churn.features.v1
+              feature_contract: churn_feature_contract_v1

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 
@@ -34,7 +35,9 @@ def compare_candidate(
     minimum_improvement: float,
 ) -> GateDecision:
     improvement = candidate_metric - champion_metric
-    if improvement < minimum_improvement:
+    if improvement < minimum_improvement and not math.isclose(
+        improvement, minimum_improvement, rel_tol=0.0, abs_tol=1e-12
+    ):
         return GateDecision(
             False,
             (f"improvement {improvement:.4f} is below {minimum_improvement:.4f}",),

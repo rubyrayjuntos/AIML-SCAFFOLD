@@ -15,7 +15,7 @@ Local `az`, `databricks`, `terraform`, `git`, `rg`, and repository tests remain 
 
 ## Client configuration
 
-VS Code server definitions are stored in `.vscode/mcp.json`. This file contains commands and endpoints only; it contains no tokens or secrets. Serena is intentionally not configured until its installed command and version are confirmed on the host.
+VS Code server definitions are stored in `.vscode/mcp.json`. This file contains commands and endpoints only; it contains no tokens or secrets. Serena is configured in `.serena/project.yml` with Python, Terraform, Markdown, and Bash language support. YAML editing remains covered by the recommended VS Code YAML extension and repository validation commands. The VS Code MCP definition starts Serena with `--project-from-cwd`, so the repository-local project configuration is selected automatically. Serena's cache remains untracked through `.serena/.gitignore`.
 
 ## Codex handoff rule
 
@@ -25,4 +25,5 @@ If an expected MCP server is unavailable in the current client, state that limit
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 0.2.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Added repository-scoped Serena configuration and automatic current-workspace project binding. |
 | 0.1.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Initial MCP and project-context tooling guidance. |

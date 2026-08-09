@@ -18,7 +18,7 @@ promotion_policy:
   metric: auc
   threshold: 0.02
 serving:
-  endpoint: churn_model_endpoint
+  endpoint: churn-model-endpoint
 retrieval:
   vector_indexes:
     - notes_vs

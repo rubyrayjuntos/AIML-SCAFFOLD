@@ -10,10 +10,13 @@
 8. Verify that `served_version`, `champion_version`, and candidate state are independently reported.
 9. Run score, API, and Foundry smoke tests.
 
+For the dev reference path, use `scripts/promote_dev_model.py` with the exact registered version and observed candidate AUC. The script requires `--approve`, sets `challenger`, `champion`, and `served` explicitly, and creates or updates only `churn-model-endpoint`.
+
 Model versions are never silently renumbered or overwritten. Retention/deletion is a separate reviewed operation.
 
 ## Documentation changelog
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 0.2.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Added explicit dev promotion and serving endpoint procedure. |
 | 0.1.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Initial model promotion runbook. |

@@ -24,8 +24,11 @@ Databricks code, workflows, permissions, and environment targets are deployed wi
 
 Production may consume centrally governed networking, Log Analytics, Key Vault, Databricks metastore, and identity resources. The template must accept those resource IDs rather than recreate shared enterprise resources.
 
+The Key Vault template property `enablePurgeProtection` is omitted for `dev` and `test` because Azure rejects an explicit `false` value; it is enabled for `prod` and is irreversible once set.
+
 ## Documentation changelog
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 0.2.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Documented environment-specific Key Vault purge-protection behavior. |
 | 0.1.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Initial deployment guide. |

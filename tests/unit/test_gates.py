@@ -21,6 +21,19 @@ def test_candidate_gate_requires_configured_improvement() -> None:
         candidate_metric=0.805,
         minimum_improvement=0.01,
     ).passed
+
+
+def test_auc_candidate_gate_requires_two_point_improvement() -> None:
+    assert not compare_candidate(
+        champion_metric=0.80,
+        candidate_metric=0.819,
+        minimum_improvement=0.02,
+    ).passed
+    assert compare_candidate(
+        champion_metric=0.80,
+        candidate_metric=0.82,
+        minimum_improvement=0.02,
+    ).passed
     assert compare_candidate(
         champion_metric=0.80,
         candidate_metric=0.81,

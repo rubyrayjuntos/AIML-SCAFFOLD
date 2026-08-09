@@ -1,11 +1,15 @@
 {
   "type": "object",
-  "required": ["risk_explanation", "what_changed", "recommended_action", "evidence"],
+  "required": ["entity_id", "risk_explanation", "what_changed", "recommended_action", "evidence", "model_version", "response_source", "request_id"],
   "properties": {
+    "entity_id": {"type": "string"},
     "risk_explanation": {"type": "string"},
     "what_changed": {"type": "string"},
     "recommended_action": {"type": "string"},
-    "evidence": {"type": "array", "items": {"type": "string"}}
+    "evidence": {"type": "array", "items": {"type": "object", "required": ["source_id", "source_type", "excerpt"], "properties": {"source_id": {"type": "string"}, "source_type": {"type": "string"}, "excerpt": {"type": "string"}}, "additionalProperties": false}},
+    "model_version": {"type": "string"},
+    "response_source": {"type": "string", "enum": ["foundry_agent", "deterministic_fallback"]},
+    "request_id": {"type": "string"}
   },
   "additionalProperties": false
 }

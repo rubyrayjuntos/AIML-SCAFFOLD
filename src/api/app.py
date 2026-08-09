@@ -14,6 +14,11 @@ from platform_core.contracts.models import (
     ScoreResponse,
     SnapshotDelta,
 )
+from platform_core.integrations.databricks_serving import (
+    DatabricksServingAdapter,
+    ServingAdapterUnavailable,
+)
+from platform_core.settings.config import settings
 
 app = FastAPI(title="Enterprise ML Workflow API", version="1.0.0")
 API_CONTRACT_VERSION = "2026-08-07"
@@ -23,7 +28,7 @@ def request_id() -> str:
     return str(uuid4())
 
 
-def _score(entity_id: str, rid: str) -> ScoreResponse:
+def _reference_score(entity_id: str, rid: str) -> ScoreResponse:
     # Reference adapter boundary. Production replaces this with the Databricks
     # client; the API contract and provenance fields remain unchanged.
     return ScoreResponse(
@@ -36,6 +41,13 @@ def _score(entity_id: str, rid: str) -> ScoreResponse:
         feature_contract="unavailable",
         request_id=rid,
     )
+
+
+def _score(entity_id: str, rid: str) -> ScoreResponse:
+    try:
+        return DatabricksServingAdapter.from_settings(settings).score(entity_id, rid)
+    except (ServingAdapterUnavailable, ImportError):
+        return _reference_score(entity_id, rid)
 
 
 @app.middleware("http")
