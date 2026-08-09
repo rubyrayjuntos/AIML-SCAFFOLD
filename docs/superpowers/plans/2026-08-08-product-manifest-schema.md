@@ -18,6 +18,7 @@
 - Ruff: line-length 100, target py312. Run `ruff check .` and `pytest` before every commit (per `AGENTS.md`).
 - Ran from repo root; all relative paths in code (`Path("src/scenarios")`, `Path("foundry")`) assume CWD is the repo root, matching the existing pattern in `tests/data_quality/test_churn_config.py`.
 - `ScenarioFeatures`' Python attribute is `schema_name`, aliased to the YAML key `schema` (`Field(min_length=1, alias="schema")`) — the bare name `schema` collides with a deprecated `BaseModel` attribute and warns on every use. Construction and YAML loading both use the alias (`schema=...` as a kwarg, or the `schema` dict key), so no other code changes; only the field declaration differs from a plain `schema: str` (found and corrected during Task 1's review, 2026-08-08).
+- `_check_retrieval_tool_reciprocity`'s comment and `test_product_manifest_rejects_retrieval_tool_with_no_backing_index`'s injected tool name must use generic/widgets-flavored examples, not real churn tool names (`get_customer_score`, `get_customer_diff`, `retrieve_customer_evidence`, `retrieve_playbooks`) — found and corrected during Task 2's review, 2026-08-08.
 
 ---
 
@@ -553,9 +554,9 @@ def test_product_manifest_rejects_retrieval_tool_with_no_backing_index(tmp_path:
     data = json.loads(tools_path.read_text())
     data["tools"].append(
         {
-            "name": "retrieve_playbooks",
+            "name": "retrieve_manuals",
             "mutates_data": False,
-            "authorization": "read-approved-gold-playbooks",
+            "authorization": "read-approved-gold-manuals",
         }
     )
     tools_path.write_text(json.dumps(data))
@@ -636,8 +637,8 @@ class ProductManifest(BaseModel):
     @model_validator(mode="after")
     def _check_retrieval_tool_reciprocity(self) -> ProductManifest:
         # Convention, not a declared field: a tool is "retrieval-capable" if its name
-        # starts with retrieve_ (matches get_customer_score/get_customer_diff not being
-        # retrieval tools, and retrieve_customer_evidence/retrieve_playbooks being ones).
+        # starts with retrieve_ (e.g. get_widget_score would not be retrieval-capable,
+        # but retrieve_widget_notes would be).
         tool_names = {tool.name for tool in self.tools.tools}
         referenced: set[str] = set()
         for index in self.scenario.retrieval.vector_indexes:
