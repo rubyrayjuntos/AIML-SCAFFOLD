@@ -200,8 +200,8 @@ class ProductManifest(BaseModel):
     @model_validator(mode="after")
     def _check_retrieval_tool_reciprocity(self) -> ProductManifest:
         # Convention, not a declared field: a tool is "retrieval-capable" if its name
-        # starts with retrieve_ (matches get_customer_score/get_customer_diff not being
-        # retrieval tools, and retrieve_customer_evidence/retrieve_playbooks being ones).
+        # starts with retrieve_ (e.g. get_widget_score would not be retrieval-capable,
+        # but retrieve_widget_notes would be).
         tool_names = {tool.name for tool in self.tools.tools}
         referenced: set[str] = set()
         for index in self.scenario.retrieval.vector_indexes:

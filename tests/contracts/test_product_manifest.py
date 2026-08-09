@@ -304,9 +304,9 @@ def test_product_manifest_rejects_retrieval_tool_with_no_backing_index(tmp_path:
     data = json.loads(tools_path.read_text())
     data["tools"].append(
         {
-            "name": "retrieve_playbooks",
+            "name": "retrieve_manuals",
             "mutates_data": False,
-            "authorization": "read-approved-gold-playbooks",
+            "authorization": "read-approved-gold-manuals",
         }
     )
     tools_path.write_text(json.dumps(data))
