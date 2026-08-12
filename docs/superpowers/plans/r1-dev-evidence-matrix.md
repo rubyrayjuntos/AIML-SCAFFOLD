@@ -51,7 +51,31 @@ This matrix must be completed with independently verifiable Dev evidence. Creati
 
 No Test or Prod claim may inherit evidence from this Dev matrix.
 
-## Current replacement candidate: 2026-08-12
+## Saved workload plan review: 2026-08-12
+
+| Evidence | Sanitized result |
+|---|---|
+| Platform source commit | `f928794` |
+| Product source commit | `7ba0d8364dd9625b118e4afba92a485f865c6f71` on protected `main` |
+| Generation ID | `sha256:f609615fd8706c19ee12a99a2d62732061e0d3f43dc172a44780bd836d87d027` |
+| Reproducible wheel digest | `sha256:f596cb4f79b899651810796c814553cd9097a01345eac9132188ea72a0e08fbd` |
+| Provider lock digest | `sha256:e23b20197002dae1c79db71736b06c67c7d4a7fb96b4d1433584c9aa2300c3f4`; AzureRM `4.81.0` |
+| Terraform | `1.10.0` in GitHub and exact-version local JSON rendering |
+| Backend | `stazmlops0001devtf` / `azure-ai-ml-ops-r1` / `azure-ai-ml-ops-dev.tfstate`; Entra/OIDC authentication |
+| Plan workflow | Run `31623628917`, attempt `1`; succeeded without apply |
+| Artifact | `terraform-plan-dev-31623628917-1`; binary plan and approval metadata retained for 30 days |
+| Binary plan digest | `sha256:91e147dc5a5bd72f29c98cb48f8294a7cf31d395d9c033ad0dc63ebe3cb73b60` |
+| Derived JSON digest | `sha256:4bed88eb1a345b393ad1ba27d23ef803a87d3e4649861f7720130a05e9124ab5`; locally rendered from the downloaded binary using Terraform `1.10.0` |
+| Action summary | `10` creates, `0` updates, `0` replacements, `0` deletes |
+| Ownership | Only project workload resources under `rg-azure-ai-ml-ops-dev`; no GitHub, Entra, backend-container, resource-group, or subscription-scoped ownership overlap |
+| Compute posture | Training and batch clusters use `Standard_D4s_v5`, minimum `0`, maximum `4`, and five-minute scale-down; no endpoint resource appears |
+| Evidence posture | Private `platform-evidence` container, blob versioning, 90-day lifecycle, and container-scoped Blob Data Contributor for the workflow principal |
+| Secret review | No credential, connection string, signed URI, or sensitive value appeared in the derived JSON; Terraform sensitive markers remain present without values |
+| Review result | `rejected_for_apply` |
+| Rejection reason | Storage disables shared keys while the Azure ML workspace defaults its system datastore to `AccessKey`; the uploaded artifact also omits the required reviewed JSON representation and its digest |
+| Mutation boundary | State lock/read occurred; no Terraform apply or Azure ML workload mutation occurred |
+
+## OIDC-live candidate: 2026-08-12
 
 | Evidence | Sanitized result |
 |---|---|
@@ -187,6 +211,7 @@ No backend reuse, identity reuse, federated credential change, role assignment, 
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.7.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded saved plan `31623628917`, its immutable digests and ten-create review, and rejection for the Azure ML AccessKey/shared-key contradiction plus incomplete artifact bundle. |
 | 1.6.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded the safe pre-plan initialization failure in run `31623045228` and invalidated generation `cc099e52...bb47ea` for workload planning pending an OIDC environment-contract correction. |
 | 1.5.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded replacement generation `cc099e52...bb47ea`, protected PR publication, passing main CI, and successful nonmutating OIDC proof. |
 | 1.4.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Invalidated generation `e662...2116e`, recorded its safe OIDC subject-mismatch proof, and captured the approved identity-only correction with a clean post-apply plan. |
