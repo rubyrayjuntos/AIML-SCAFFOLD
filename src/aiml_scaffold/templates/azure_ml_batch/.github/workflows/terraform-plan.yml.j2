@@ -66,7 +66,7 @@ jobs:
             --backend-resource-group "[[ backend_resource_group ]]" \
             --backend-storage-account "[[ backend_storage_account ]]" \
             --backend-container "[[ backend_container ]]" \
-            --state-key "[[ terraform_state_key ]]"
+            --state-key "[[ terraform_state_key ]]" \
             --state-snapshot "${RUNNER_TEMP}/pre-plan-state.json"
           plan_digest="$(cut -d ' ' -f 1 "${RUNNER_TEMP}/plan-artifact/r1.tfplan.sha256")"
           echo "plan_digest=$plan_digest" >> "$GITHUB_OUTPUT"

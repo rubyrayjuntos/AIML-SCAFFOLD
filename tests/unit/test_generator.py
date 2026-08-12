@@ -200,6 +200,10 @@ def test_generated_workflows_enforce_digest_bound_manual_apply(
     assert "current-state.json" in apply
     assert "apply-authorization-and-result.json" in apply
     assert "pre-plan-state.json" in plan
+    assert any(
+        line.strip().startswith('--state-key "') and line.rstrip().endswith("\\")
+        for line in plan.splitlines()
+    )
     assert "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093" in apply
     assert "terraform plan" not in apply
     assert "approved-plan/r1.tfplan" in apply

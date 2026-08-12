@@ -243,6 +243,8 @@ Disposition: `saved_plan_review_passed_apply_not_authorized`.
 
 The reviewed candidate remains immutable evidence, but it is superseded for any future apply by the approved governance-hardening change. The replacement must bind platform source and wheel digests, expiry, Azure context, pre-plan state identity, both reviewed plan digests, allowlisted authorization, and durable apply-result evidence. No apply may use run `31626134587`.
 
+Governance-hardened plan run `31631623498` reached authenticated initialization, captured the empty pre-plan state identity, and created the Terraform plan, then stopped before artifact publication because the generated shell command omitted a continuation before `--state-snapshot`. No apply occurred. The run is retained as negative workflow evidence and its generation is ineligible for apply; the defect must be corrected in the platform template and regenerated.
+
 Current classification:
 
 > **R1 preview—bootstrap-live, OIDC-live, and workload-plan-live conformant; reviewed workload plan saved; apply not authorized; Azure ML Dev lifecycle not live validated.**
@@ -251,6 +253,7 @@ Current classification:
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.11.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded safe negative plan run `31631623498`, the shell-continuation root cause, candidate invalidation, and no-apply boundary. |
 | 1.10.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Preserved saved plan `31626134587` as immutable reviewed evidence but superseded it for apply pending provenance, expiry, state, context, actor, and apply-result hardening. |
 | 1.9.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded replacement generation `12207f5b...1cdab`, protected publication, saved-plan run `31626134587`, six-file artifact digests, independent JSON derivation, successful infrastructure review, and no-apply stop. |
 | 1.8.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded local completion of the bounded AML identity/RBAC and versioned six-file plan-artifact correction; replacement generation and saved plan remain pending. |
