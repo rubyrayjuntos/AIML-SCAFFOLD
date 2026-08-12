@@ -4,11 +4,11 @@ This runbook provisions only the approved prerequisites for the `azure-ai-ml-ops
 
 ## Approved scope
 
-- Create private GitHub repository `rubyrayjuntos/azure-aiml-ops` and environment `dev` with protected-branch deployment policy.
+- Maintain public GitHub repository `rubyrayjuntos/azure-aiml-ops` and environment `dev` with protected-branch deployment policy.
 - Create resource group `rg-azure-ai-ml-ops-dev` in East US.
 - Create private container `azure-ai-ml-ops-r1` in existing storage account `stazmlops0001devtf`.
 - Create one single-tenant Entra application/service principal with no secret.
-- Create the exact subject `repo:rubyrayjuntos/azure-aiml-ops:environment:dev`.
+- Create the exact ID-qualified subject `repo:rubyrayjuntos@204968804/azure-aiml-ops@1331566719:environment:dev`.
 - Assign container-scoped `Storage Blob Data Contributor` and Dev-resource-group-scoped `Contributor` plus `User Access Administrator`.
 - Populate the protected GitHub environment with Azure client/object, tenant, and subscription identifiers. These are identifiers, not credentials.
 
@@ -40,11 +40,12 @@ terraform -chdir=infra init -backend=false -lockfile=readonly
 terraform -chdir=infra validate
 ```
 
-The deployment completed on 2026-08-11. The post-apply remote plan returned detailed exit code `0` and no changes. This proves bootstrap convergence only; it is not Azure ML workload or OIDC token-exchange evidence.
+The initial deployment completed on 2026-08-11. On 2026-08-12, an approved corrective plan updated only the Entra federated credential from the conventional repository subject to GitHub's exact ID-qualified subject. The saved plan contained `0` adds, `1` in-place update, and `0` destroys; direct Entra verification passed and the post-apply remote plan returned detailed exit code `0`. This proves bootstrap convergence only; OIDC token exchange requires a GitHub Actions run and Azure ML workload behavior remains unexercised.
 
 ## Documentation changelog
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 0.3.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded the identity-only correction to GitHub's ID-qualified subject, adopted the owner-approved public repository intent, and verified a clean post-apply plan. |
 | 0.2.0 | 2026-08-11 | 2026-08-11 | Ray Swan / Codex | Recorded the GitHub private-repository billing limitation, supported protected-branch fallback, and unresolved manual-approval enforcement gate. |
 | 0.1.0 | 2026-08-11 | 2026-08-11 | Ray Swan / Codex | Defined approved Terraform bootstrap scope, circular-backend seed/import sequence, risk gates, rollback, and validation boundary. |

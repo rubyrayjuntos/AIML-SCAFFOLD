@@ -2,6 +2,10 @@ variable "repository_name" {
   type = string
 }
 
+variable "repository_visibility" {
+  type = string
+}
+
 variable "environment_name" {
   type = string
 }

@@ -1,7 +1,7 @@
 resource "github_repository" "generated" {
   name                   = var.repository_name
   description            = "Generated Azure AI ML Ops R1 Dev project repository."
-  visibility             = "private"
+  visibility             = var.repository_visibility
   has_issues             = true
   has_projects           = false
   has_wiki               = false

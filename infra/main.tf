@@ -11,6 +11,7 @@ module "github_prerequisites" {
   source = "./modules/github_prerequisites"
 
   repository_name        = var.github_repository
+  repository_visibility  = var.github_repository_visibility
   environment_name       = var.github_environment
   azure_client_id        = module.entra_identity.application_client_id
   azure_client_object_id = module.entra_identity.service_principal_object_id

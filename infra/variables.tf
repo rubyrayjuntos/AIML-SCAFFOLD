@@ -50,6 +50,17 @@ variable "github_environment" {
   default     = "dev"
 }
 
+variable "github_repository_visibility" {
+  description = "Visibility of the generated deployment repository."
+  type        = string
+  default     = "public"
+
+  validation {
+    condition     = contains(["public", "private"], var.github_repository_visibility)
+    error_message = "GitHub repository visibility must be public or private."
+  }
+}
+
 variable "backend_resource_group_name" {
   description = "Existing shared Terraform backend resource group."
   type        = string
@@ -89,7 +100,7 @@ variable "federated_credential_name" {
 variable "federated_subject" {
   description = "Exact GitHub Actions OIDC subject."
   type        = string
-  default     = "repo:rubyrayjuntos/azure-aiml-ops:environment:dev"
+  default     = "repo:rubyrayjuntos@204968804/azure-aiml-ops@1331566719:environment:dev"
 }
 
 variable "application_owner_object_id" {

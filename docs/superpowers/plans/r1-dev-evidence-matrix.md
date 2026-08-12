@@ -11,9 +11,9 @@ This matrix must be completed with independently verifiable Dev evidence. Creati
 | Backend management plane | Storage account and state container are independently visible | Live: account and dedicated container independently verified |
 | Backend data plane | Active CLI identity can list state blobs using Entra authentication; write and lock remain unexercised | Live bootstrap state write and lock exercised through Terraform; deployment-principal OIDC exchange remains unexercised |
 | Environment-scoped OIDC | Application/client ID, principal/object ID, federated credential, exact environment roles, and no subscription Owner | Live: app/principal relationship, exact issuer/subject/audience, three scoped roles, and absence of Owner verified |
-| OIDC token exchange | Actual GitHub workflow exchanges a token as the intended deployment identity | Not exercised by local doctor |
+| OIDC token exchange | Actual GitHub workflow exchanges a token as the intended deployment identity | First live attempt failed safely because GitHub emitted an ID-qualified subject not present in the original manifest; replacement proof pending |
 | Authenticated doctor | Separate context, identity, backend, shared-key, OIDC configuration, RBAC, SKU, and quota results | Earlier candidate stopped before resource queries; bootstrap configuration is live, but replacement-candidate doctor remains pending |
-| Active identity boundary | Local CLI identity is recorded separately from the intended GitHub deployment identity | Deployment identity is configured and exact federation verified; actual GitHub token exchange remains unexercised |
+| Active identity boundary | Local CLI identity is recorded separately from the intended GitHub deployment identity | Deployment identity is configured with GitHub's exact ID-qualified subject; replacement token exchange pending |
 | Bootstrap plan | Approved prerequisites resolved into a verified infrastructure plan | Applied from reviewed saved plans; first apply preserved after GitHub reviewer-rule billing failure, then bounded corrective plan completed |
 | Generation integrity | Manifest, plan, template, constraints, tree, and generation digests | Candidate receipt reverified before preflight |
 | Generated conformance | Tests, Ruff, YAML, actionlint, Terraform validation, secret and scenario scans | Local proof only |
@@ -73,6 +73,8 @@ No Test or Prod claim may inherit evidence from this Dev matrix.
 
 An earlier wheel built directly from the long-lived worktree was rejected because an ignored stale build artifact entered the wheel. It produced generation `sha256:fbcc524f7a2cd2b108dcc6e87d1dc88d802597a4e2b9bb53adf643c0958dc813`, which is permanently invalidated and was never pushed. Clean archive builds are now the evidence source.
 
+Generation `sha256:e662bc826b5125aaef3563cdc7b73e7e9126d392664aa2cba4964ed38e72116e` is permanently invalidated. GitHub Actions run `31620247861` reached Azure login without issuing an Azure token and proved that this repository emits the immutable subject `repo:rubyrayjuntos@204968804/azure-aiml-ops@1331566719:environment:dev`; the candidate manifest instead declared the conventional repository-name subject. No Terraform workload plan/apply or Azure ML operation occurred.
+
 ## Bootstrap deployment: 2026-08-11
 
 The approved bootstrap completed against the remote Entra-authenticated backend. The state container was created privately, imported before planning, and retained throughout. The original saved plan contained 13 creates and one imported-container no-op, with zero changes/deletes and no Owner assignment. GitHub rejected the required-reviewer rule for the private repository because the current billing plan does not support it. Existing resources and state were preserved; a corrective plan containing only the Dev environment and four identifier-only secrets completed successfully.
@@ -83,16 +85,16 @@ The approved bootstrap completed against the remote Entra-authenticated backend.
 | Corrective saved-plan digest | `sha256:e9931e01c45286c7d44ea13d0f031e91f44ff11c1dacf57fcc7038e9ec23e756` |
 | Post-apply plan digest | `sha256:851d7c1037c521f7e89a20716e32f04a3503dc1c71abeedf93d32871361ed0be` |
 | Post-apply plan result | Detailed exit code `0`; no changes |
-| GitHub repository | Private `rubyrayjuntos/azure-aiml-ops`; intentionally empty pending separate source-push authorization; no default/protected branch exists yet |
+| GitHub repository | Public `rubyrayjuntos/azure-aiml-ops`; generated source is on protected `main` |
 | GitHub environment | `dev`; protected-branch rule active; four expected identifier-only secret names verified |
 | Manual approval posture | Native reviewers unsupported; digest-bound separate plan/apply fallback implemented locally and pending immutable candidate publication. Independent human reviewer separation is unavailable for the sole operator. |
 | Entra application | Single tenant; client ID `72423e94-128f-45f5-a65e-347e9757a2a1` |
 | Deployment principal | Service-principal object ID `c5618b4d-3642-483c-83c4-5f7eb37bcb4c` |
-| Federated credential | Exact GitHub issuer, `environment:dev` subject, and Azure token-exchange audience verified |
+| Federated credential | Exact GitHub issuer, ID-qualified `environment:dev` subject, and Azure token-exchange audience verified after identity-only corrective apply |
 | Dev resource group | `rg-azure-ai-ml-ops-dev`, East US, provisioning succeeded, approved tags present |
 | Backend | Existing account with Shared Key and blob public access disabled; dedicated container private |
 | Deployment roles | Container-scoped Blob Data Contributor; Dev-resource-group Contributor and User Access Administrator; no Owner |
-| OIDC token exchange | `not_exercised`; requires an actual GitHub Actions run |
+| OIDC token exchange | Negative proof: run `31620247861` failed at Azure login due the old conventional-subject intent; replacement run pending |
 | Azure ML lifecycle | `not_exercised`; bootstrap created no Azure ML workload resources |
 
 ## Read-only preflight attempt: 2026-08-11
@@ -154,7 +156,7 @@ Discovery completed at `2026-08-12T01:59:55Z`. It performed management-plane rea
 | Product owner | `Ray Swan` |
 | Cost center | `UNASSIGNED` |
 | GitHub federated issuer | `https://token.actions.githubusercontent.com` |
-| GitHub federated subject | `repo:rubyrayjuntos/azure-aiml-ops:environment:dev` |
+| GitHub federated subject | `repo:rubyrayjuntos@204968804/azure-aiml-ops@1331566719:environment:dev` |
 | GitHub federated audience | `api://AzureADTokenExchange` |
 | Identity posture | New single-tenant application/service principal; no client secret; environment-scoped least privilege |
 | Bootstrap authorization | Plan preparation authorized; Azure/Entra execution remains separately approval-gated |
@@ -166,6 +168,7 @@ No backend reuse, identity reuse, federated credential change, role assignment, 
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.4.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Invalidated generation `e662...2116e`, recorded its safe OIDC subject-mismatch proof, and captured the approved identity-only correction with a clean post-apply plan. |
 | 1.3.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded generated source publication, passing GitHub CI, failed private branch-protection attempt, and deliberate stop before OIDC. |
 | 1.2.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded the reproducible clean wheel, eligible replacement generation and digests, offline validation, and invalidated contaminated local-build candidate. |
 | 1.1.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Corrected the current deployment-identity summary and recorded the locally implemented digest-bound manual approval fallback. |
