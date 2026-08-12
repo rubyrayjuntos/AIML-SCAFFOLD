@@ -140,6 +140,57 @@ def test_authenticated_doctor_reports_each_preflight_boundary(
     assert _check(result, "oidc_token_exchange")["status"] == "not_exercised"
 
 
+def test_authenticated_doctor_requests_subscription_aware_full_sku_metadata(
+    generated_project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure_authenticated_doctor(monkeypatch)
+    observed: list[list[str]] = []
+
+    def record_commands(command: list[str]) -> tuple[bool, str]:
+        observed.append(command)
+        return _successful_azure_response(command)
+
+    monkeypatch.setattr(doctor_module, "_run_read_only", record_commands)
+    result = doctor_module.doctor_project(generated_project, "dev")
+    assert result["overall_status"] == "passed"
+    sku_command = next(command for command in observed if command[1:3] == ["vm", "list-skus"])
+    assert "--all" in sku_command
+    assert "--resource-type" not in sku_command
+
+
+def test_subscription_restricted_sku_fails_even_when_quota_exists(
+    generated_project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure_authenticated_doctor(monkeypatch)
+
+    def restricted_sku(command: list[str]) -> tuple[bool, str]:
+        if command[1:3] == ["vm", "list-skus"]:
+            return True, json.dumps(
+                [
+                    {
+                        "name": "Standard_D4s_v5",
+                        "family": "standardDSv5Family",
+                        "restrictions": [
+                            {
+                                "reasonCode": "NotAvailableForSubscription",
+                                "type": "Location",
+                                "values": ["eastus"],
+                            }
+                        ],
+                        "capabilities": [{"name": "vCPUs", "value": "4"}],
+                    }
+                ]
+            )
+        return _successful_azure_response(command)
+
+    monkeypatch.setattr(doctor_module, "_run_read_only", restricted_sku)
+    result = doctor_module.doctor_project(generated_project, "dev")
+    sku_check = _check(result, "compute_sku_availability")
+    assert sku_check["status"] == "failed"
+    assert sku_check["restrictions"][0]["reasonCode"] == "NotAvailableForSubscription"
+    assert _check(result, "compute_quota_sufficiency")["status"] == "passed"
+
+
 def test_context_mismatch_is_not_collapsed_into_other_checks(
     generated_project: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

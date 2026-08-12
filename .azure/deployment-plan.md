@@ -113,7 +113,7 @@ Read-only quota and inventory checks were run against East US on 2026-08-12.
   - [x] No unresolved Go-style environment template variables exist.
   - [x] No `main.tfvars.json` file is generated; JSON syntax validation is not applicable.
   - [x] Read-only Azure policy, inventory, role-assignment, SKU, and quota checks pass.
-- [x] Complete the repeated Azure validation workflow and populate validation proof after resolving installed-wheel conformance.
+- [x] Complete the repeated Azure validation workflow after subscription-aware doctor correction.
 - [ ] Mark the generated product plan `Validated` only through that workflow.
 - [ ] Build two byte-identical wheels and record the exact digest.
 - [ ] Regenerate two byte-identical product trees.
@@ -135,7 +135,7 @@ The approved Azure validation workflow executed locally and with authenticated r
 
 | Check | Command | Result | Timestamp |
 |---|---|---|---|
-| Platform contracts | `python -m pytest -q` | Passed, 110 tests | 2026-08-12T20:48:31Z |
+| Platform contracts | `python -m pytest -q` | Passed, 112 tests | 2026-08-12T21:02:00Z |
 | Python lint and diff hygiene | `python -m ruff check .`; `git diff --check` | Passed | 2026-08-12T20:36:58Z |
 | Deterministic generation | Two independent `aiml-scaffold generate` executions plus tree comparison and receipt verification | Passed; byte-identical source trees | 2026-08-12T20:36:58Z |
 | Generated repository | Generated tests, Ruff, YAML parsing, Actionlint, scenario scan, and offline doctor | Passed; 8 tests; dedicated secret-scanner binary unavailable, credential rejection vectors passed in platform suite | 2026-08-12T20:36:58Z |
@@ -148,8 +148,9 @@ The approved Azure validation workflow executed locally and with authenticated r
 | Installed-wheel product conformance | Generate with the clean reproducible wheel, then run generated tests | Failed safely: package-data omitted `scripts/emit_evidence.py.j2`; wheel `sha256:41f429c4f1c9bf73247a3440e39963382c3519e9c7e883070ed254eeff370864` and generation `sha256:ccc9517a2a97f80df8b4c8403bc226d48bb5fa843b745d5e3e5b6f6196fabec6` invalidated before publication or Azure access | 2026-08-12T20:45:00Z |
 | Post-install provenance | Failed editable install under unsupported local Python 3.13, followed by receipt verification | Found and corrected false source-drift detection from setuptools-created `*.egg-info`; verifier now excludes only recognized build/runtime paths and retains all tracked-source checks | 2026-08-12T20:48:00Z |
 | Corrected installed-wheel conformance | Clean scratch build, isolated wheel install, product generation, 8 generated tests, Ruff, YAML, Actionlint, Terraform init/validate, receipt checks before and after synthetic build metadata | Passed; evidence writer and deployment plan present; no runtime cache included; Python 3.12 dependency installation remains protected CI authority because local interpreter is 3.13 | 2026-08-12T20:48:31Z |
+| Product authenticated doctor | Exact replacement generation with intended identity identifiers | Required context/backend/OIDC/RBAC checks passed, but supported subscription-aware SKU discovery reports `Standard_D4s_v5` restricted in East US; product validation and planning stopped | 2026-08-12T20:58:00Z |
 
-**Validated by:** Repeated Azure validation workflow after installed-wheel package and post-install provenance corrections.
+**Validated by:** Repeated Azure validation workflow after subscription-aware doctor correction.
 
 ## Role assignment verification
 
@@ -189,7 +190,7 @@ Failed deployment retains state, GitHub evidence, and any project-local evidence
 
 ## 11. Next steps
 
-Current phase: repeated factory validation passed; corrected protected publication is next.
+Current phase: platform correction is validated; product progression is blocked on an explicit compute-SKU intent decision.
 
 1. Implement the factory-generated governance artifact and validation workflow integration.
 2. Complete the documented Azure validation workflow.
@@ -199,6 +200,8 @@ Current phase: repeated factory validation passed; corrected protected publicati
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.9.0 | 2026-08-12 | 2026-08-12 | Ray Swan / Codex | Repeated platform validation successfully at 112 tests after making SKU discovery subscription-restriction-aware; product planning remains stopped. |
+| 1.8.0 | 2026-08-12 | 2026-08-12 | Ray Swan / Codex | Recorded the authenticated product doctor SKU stop and corrected doctor to request complete subscription-aware SKU restriction metadata. |
 | 1.7.0 | 2026-08-12 | 2026-08-12 | Ray Swan / Codex | Repeated the full Azure validation workflow successfully after installed-wheel and post-install provenance corrections; restored Validated status. |
 | 1.6.0 | 2026-08-12 | 2026-08-12 | Ray Swan / Codex | Added installed-wheel evidence-writer packaging and standard build-metadata provenance exclusions after safe local negative tests. |
 | 1.5.0 | 2026-08-12 | 2026-08-12 | Ray Swan / Codex | Reopened validation after installed-wheel generation omitted the evidence-writer template; invalidated the unpublished wheel and generation before Azure access. |
