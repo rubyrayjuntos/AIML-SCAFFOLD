@@ -247,14 +247,33 @@ Governance-hardened plan run `31631623498` reached authenticated initialization,
 
 Replacement plan run `31632141125` produced the complete six-file artifact with 12 creates and no update, replacement, or delete. Independent apply-path verification then rejected it before apply because the backend HCL verifier attempted to map the nested state-identity object as an HCL backend field. This plan also remains immutable negative evidence and is ineligible for apply. State identity remains a separately validated manifest contract; only resource group, storage account, container, and key are compared to generated backend HCL.
 
+### Governance-hardened replacement plan
+
+| Evidence | Sanitized result |
+|---|---|
+| Platform source | Commit `96d17383fcadf0e2372f6f0ea64aa657fa6cb014`; reproducible wheel `sha256:478bf08eb26bbabfda408880f47217ce55623b43c7288ce3bae1ba4f9f02566b` |
+| Product generation | `sha256:7c9a4cf3b049d8ed3dce1974e9748273528d53c9154e485b0bec45b037162220` |
+| Protected publication | PR `rubyrayjuntos/azure-aiml-ops#7`; merge commit `46c23d1b0d15402d1cd5bf1ccae8a3f15a61fbcb`; PR CI `31632395428` and main CI `31632508987` passed |
+| Saved plan | Run `31632608556`, attempt `1`; exact six-file artifact; created `2026-08-12T19:26:36Z`; expires `2026-09-11T19:26:36Z` |
+| Plan digests | Binary `sha256:60aba02ff87018d8cba1f9656bcf9e3e3e22b518cc58ba3e3ad670b2b47a196d`; sanitized JSON `sha256:3d8f360f31a40134a8e22dd7f41a29afdfd1a5a3e2e5b9e9256b97e2a68582a1` |
+| State binding | Backend lineage `6ee99d75-b936-96fd-17d6-da83ebe82ed7`, serial `1`, digest `sha256:d98ec1cef0a1ffd356ca99b2ebc9da557f790b0cafa3362911ef16da420c5503`; authenticated read-only recheck matched |
+| Independent representation | Terraform `1.10.0` re-derived byte-identical sanitized JSON from the downloaded binary plan |
+| Action review | 12 creates; 0 updates, replacements, deletes, reads, or no-ops; only declared Azure ML workload resources |
+| Identity and RBAC | System-assigned workspace identity; project compute UAMI; Storage Blob Data Contributor references scoped to project storage; workflow principal is the intended object ID; no arbitrary object ID outside manifest intent |
+| Compute and Dev posture | Training and batch clusters use `Standard_D4s_v5`, min nodes `0`, max nodes `4`; public node IP and local auth remain Dev-only warnings |
+| Apply | Not dispatched; no infrastructure mutation occurred |
+
+Disposition: `governance_hardened_saved_plan_review_passed_apply_not_authorized`.
+
 Current classification:
 
-> **R1 preview—bootstrap-live, OIDC-live, and workload-plan-live conformant; reviewed workload plan saved; apply not authorized; Azure ML Dev lifecycle not live validated.**
+> **R1 preview—bootstrap-live, OIDC-live, and governance-hardened workload-plan-live conformant; reviewed workload plan saved; apply not authorized; Azure ML Dev lifecycle not live validated.**
 
 ## Documentation changelog
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.13.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded final governance-hardened generation, protected publication, saved-plan run `31632608556`, provenance/expiry/state binding, independent JSON and live state verification, infrastructure review, and no-apply stop. |
 | 1.12.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded saved plan `31632141125`, its safe apply-path verification failure, and the bounded nested-state/backend-HCL verifier correction. |
 | 1.11.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded safe negative plan run `31631623498`, the shell-continuation root cause, candidate invalidation, and no-apply boundary. |
 | 1.10.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Preserved saved plan `31626134587` as immutable reviewed evidence but superseded it for apply pending provenance, expiry, state, context, actor, and apply-result hardening. |
