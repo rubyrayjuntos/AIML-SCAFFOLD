@@ -37,6 +37,7 @@ def test_generation_is_byte_stable(tmp_path: Path, manifest_payload: dict) -> No
     assert _tree(first) == _tree(second)
     assert first_receipt == second_receipt
     assert verify_generation(first)["generation_id"] == first_receipt["generation_id"]
+    assert not any("__pycache__" in path.parts for path in first.rglob("*"))
 
 
 def test_template_digest_ignores_runtime_cache_files(tmp_path: Path) -> None:

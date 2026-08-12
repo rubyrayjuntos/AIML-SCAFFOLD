@@ -22,6 +22,10 @@ IGNORED_RUNTIME_PARTS = {
 }
 
 
+def _is_runtime_path(path: Path, root: Path) -> bool:
+    return any(part in IGNORED_RUNTIME_PARTS for part in path.relative_to(root).parts)
+
+
 def _canonical_json(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
@@ -49,7 +53,7 @@ def template_digest(root: Path | None = None) -> str:
         file
         for file in source.rglob("*")
         if file.is_file()
-        and not any(part in IGNORED_RUNTIME_PARTS for part in file.relative_to(source).parts)
+        and not _is_runtime_path(file, source)
     ):
         relative = path.relative_to(source).as_posix()
         digest.update(relative.encode("utf-8"))
@@ -166,7 +170,12 @@ def generate_project(
         keep_trailing_newline=True,
         newline_sequence="\n",
     )
-    for source in sorted(path for path in template_root().rglob("*") if path.is_file()):
+    templates = template_root()
+    for source in sorted(
+        path
+        for path in templates.rglob("*")
+        if path.is_file() and not _is_runtime_path(path, templates)
+    ):
         relative = source.relative_to(template_root()).as_posix()
         destination_relative = relative[:-3] if relative.endswith(".j2") else relative
         destination = output / destination_relative
