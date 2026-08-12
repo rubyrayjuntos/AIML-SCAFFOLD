@@ -9,11 +9,11 @@ This matrix must be completed with independently verifiable Dev evidence. Creati
 | Explicit Azure context | Expected tenant and deployment subscription match the active CLI context | Confirmed for replacement candidate; invalidated candidate still contains placeholders |
 | Real bootstrap references | Backend resource group, storage account, container, backend subscription, and cross-subscription policy result | Live: same-subscription backend and dedicated private `azure-ai-ml-ops-r1` container verified |
 | Backend management plane | Storage account and state container are independently visible | Live: account and dedicated container independently verified |
-| Backend data plane | Active CLI identity can list state blobs using Entra authentication; write and lock remain unexercised | Live bootstrap state write and lock exercised through Terraform; deployment-principal OIDC exchange remains unexercised |
+| Backend data plane | Active CLI identity can list state blobs using Entra authentication; write and lock remain unexercised | Live: deployment principal listed the dedicated container through Entra in OIDC run `31621923439`; workload state write/lock remains unexercised |
 | Environment-scoped OIDC | Application/client ID, principal/object ID, federated credential, exact environment roles, and no subscription Owner | Live: app/principal relationship, exact issuer/subject/audience, three scoped roles, and absence of Owner verified |
-| OIDC token exchange | Actual GitHub workflow exchanges a token as the intended deployment identity | First live attempt failed safely because GitHub emitted an ID-qualified subject not present in the original manifest; replacement proof pending |
+| OIDC token exchange | Actual GitHub workflow exchanges a token as the intended deployment identity | Passed live in run `31621923439`; client, object, and tenant claims matched the intended service principal |
 | Authenticated doctor | Separate context, identity, backend, shared-key, OIDC configuration, RBAC, SKU, and quota results | Earlier candidate stopped before resource queries; bootstrap configuration is live, but replacement-candidate doctor remains pending |
-| Active identity boundary | Local CLI identity is recorded separately from the intended GitHub deployment identity | Deployment identity is configured with GitHub's exact ID-qualified subject; replacement token exchange pending |
+| Active identity boundary | Local CLI identity is recorded separately from the intended GitHub deployment identity | Passed live: workflow token represented the intended service principal; the local CLI user was not used |
 | Bootstrap plan | Approved prerequisites resolved into a verified infrastructure plan | Applied from reviewed saved plans; first apply preserved after GitHub reviewer-rule billing failure, then bounded corrective plan completed |
 | Generation integrity | Manifest, plan, template, constraints, tree, and generation digests | Candidate receipt reverified before preflight |
 | Generated conformance | Tests, Ruff, YAML, actionlint, Terraform validation, secret and scenario scans | Local proof only |
@@ -50,6 +50,23 @@ This matrix must be completed with independently verifiable Dev evidence. Creati
 | Conflicting or post-terminal events | Projection remains visible and reports `invalid` | Local proof only |
 
 No Test or Prod claim may inherit evidence from this Dev matrix.
+
+## Current replacement candidate: 2026-08-12
+
+| Evidence | Sanitized result |
+|---|---|
+| Platform source commit | `490d60fb9a3fb46f52ba95ce24e944cc45790d10` |
+| Reproducible wheel digest | `sha256:f362d7582ef6dae27b3a5c915d2fbebcce13b1554496b6ca60ac7d774e035f5b`; two clean-archive builds matched |
+| Generation ID | `sha256:cc099e528c371fb448550f37103b024d8b107203c7878a66a371163e86bb47ea` |
+| Manifest digest | `sha256:61e2f5cafe93b65460886ef1189b7df5e9438f8d0c873ebb35f07db96262c588` |
+| Resolved-plan digest | `sha256:63f8ddfbdca984274265cf919cf7188726256fb2bfea87b628154465ffbdea81` |
+| Template digest | `sha256:c580f27680ab20cbbba5ccfcd7e047c46ac15805b71732b664e4deae6bb87921` |
+| Generated-files digest | `sha256:be572abbee2ce0e19cf223b3578254f68fd38d5cce910ae14131aa6155f14be2` |
+| Determinism | Byte-identical trees from distinct Python 3.12 `uv` and pip installations; runtime cache files excluded from source-template enumeration |
+| Local conformance | 8 tests, Ruff, provenance verification, YAML, actionlint, Terraform init/validate, and scenario scan passed; gitleaks unavailable locally |
+| Publication | Product PR `#2` passed required validation and merged to protected `main` as `6532d6605fc497555d26eaeface997e5ac6556d9`; post-merge CI `31621790883` passed |
+| OIDC proof | Run `31621923439` passed token identity, Dev-resource-group read, backend-container data read, and expected out-of-scope management denial |
+| Mutation boundary | Terraform workload state/write/lock, plan/apply, and Azure ML lifecycle were not exercised |
 
 ## Replacement publication candidate: 2026-08-12
 
@@ -94,7 +111,7 @@ The approved bootstrap completed against the remote Entra-authenticated backend.
 | Dev resource group | `rg-azure-ai-ml-ops-dev`, East US, provisioning succeeded, approved tags present |
 | Backend | Existing account with Shared Key and blob public access disabled; dedicated container private |
 | Deployment roles | Container-scoped Blob Data Contributor; Dev-resource-group Contributor and User Access Administrator; no Owner |
-| OIDC token exchange | Negative proof: run `31620247861` failed at Azure login due the old conventional-subject intent; replacement run pending |
+| OIDC token exchange | Passed in replacement run `31621923439`; earlier negative run `31620247861` remains immutable diagnostic evidence |
 | Azure ML lifecycle | `not_exercised`; bootstrap created no Azure ML workload resources |
 
 ## Read-only preflight attempt: 2026-08-11
@@ -168,6 +185,7 @@ No backend reuse, identity reuse, federated credential change, role assignment, 
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.5.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded replacement generation `cc099e52...bb47ea`, protected PR publication, passing main CI, and successful nonmutating OIDC proof. |
 | 1.4.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Invalidated generation `e662...2116e`, recorded its safe OIDC subject-mismatch proof, and captured the approved identity-only correction with a clean post-apply plan. |
 | 1.3.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded generated source publication, passing GitHub CI, failed private branch-protection attempt, and deliberate stop before OIDC. |
 | 1.2.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded the reproducible clean wheel, eligible replacement generation and digests, offline validation, and invalidated contaminated local-build candidate. |
