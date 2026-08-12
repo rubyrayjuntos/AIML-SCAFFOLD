@@ -35,7 +35,23 @@ Protected-branch policy controls eligible deployment refs; it is not an independ
 
 ## Key Vault
 
-Generated R1 Terraform creates an RBAC-enabled project Key Vault inside the assigned environment resource group. Runtime managed identities receive only required access. The deployment identity receives scoped infrastructure permissions and only the evidence-container data role required by generated workflows.
+Generated R1 Terraform creates an RBAC-enabled project Key Vault inside the assigned environment resource group. The Azure ML workspace keeps its recommended system-assigned identity and explicitly uses identity-based access for its default storage. Azure ML owns the workspace identity's service-created Azure AI Administrator assignment; workload Terraform owns the data-plane assignments described below.
+
+| Principal source | Role | Scope | Purpose | Creation owner | Dependency | Live proof | Removal condition |
+|---|---|---|---|---|---|---|---|
+| Workspace system-assigned identity | Azure AI Administrator | Environment resource group | Azure ML access to associated Storage, Key Vault, Application Insights, and any service-created ACR | Azure ML service | Workspace creation | Verify exact principal and assignment after apply, then exercise workspace creation and associated-resource access | Workspace deletion |
+| Project-created compute UAMI | Storage Blob Data Contributor | Project storage account | Model/job input and output, MLflow, and registry operations with Shared Key disabled | Workload Terraform | UAMI and storage before compute clusters | Training output plus conditional model registration | No generated job, MLflow, or registry path uses the identity |
+| GitHub OIDC deployment principal | Storage Blob Data Contributor | Project storage account | Local-source upload, model registration, batch workflow input/output, and evidence publication | Workload Terraform | Storage before lifecycle workflows | Training submission, registration, batch invocation, and evidence write | All workflow data operations move to a narrower runtime identity |
+
+The compute UAMI is project-owned. Its resource and scope are known in the plan, while its principal ID is expected to be known only after apply. Terraform references that principal directly, skips the initial Entra replication check, and makes compute creation depend on the storage role assignment. Arbitrary externally supplied runtime principal IDs are prohibited. Post-apply principal and role verification is mandatory.
+
+R1 creates no ACR because the selected Azure ML path does not require a project-managed registry. Key Vault and Application Insights need no additional Terraform-created data-plane assignment for the current non-CMK, non-secret-injection batch scope. Any future operation that proves otherwise must add a purpose-specific role and live proof rather than broadening permissions speculatively.
+
+Authoritative basis, reviewed 2026-08-12:
+
+- [Disable Shared Key access for Azure ML workspace storage](https://learn.microsoft.com/azure/machine-learning/how-to-disable-local-auth-storage?view=azureml-api-2) requires identity-based system datastores and identifies a compute UAMI with Storage Blob Data Contributor for model and MLflow input/output.
+- [Azure ML service authentication](https://learn.microsoft.com/azure/machine-learning/how-to-identity-based-service-authentication?view=azureml-api-2) recommends a system-assigned workspace identity for associated resources and documents minimum compute/storage roles.
+- [Azure ML workspace roles](https://learn.microsoft.com/azure/machine-learning/how-to-assign-roles?view=azureml-api-2) documents the Azure AI Administrator assignment used for new workspace system identities.
 
 Store values such as Databricks OAuth credentials, Foundry configuration secrets, and application connection details in Key Vault. Reference them from Container Apps or deployment configuration through secret references. Never put values in `.env`, YAML profiles, workspace files, or GitHub logs.
 
@@ -66,6 +82,7 @@ They are intentionally declarative and safe to review. Secrets and subscription-
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 0.6.0 | 2026-08-07 | 2026-08-12 | Ray Swan / Codex | Selected project-owned AML identities, explicit identity-based storage, purpose-scoped roles, dependency ordering, and mandatory post-apply verification. |
 | 0.5.0 | 2026-08-07 | 2026-08-12 | Ray Swan / Codex | Documented the AzureRM OIDC environment contract required after `azure/login` for Terraform backend and provider authentication. |
 | 0.4.0 | 2026-08-07 | 2026-08-12 | Ray Swan / Codex | Distinguished protected branches from manual approval and referenced the digest-bound fallback contract. |
 | 1.0.0-rc1 | 2026-08-07 | 2026-08-11 | Ray Swan / Codex | Aligned identity, Key Vault, environment profiles, and setup with the R1 Terraform factory. |

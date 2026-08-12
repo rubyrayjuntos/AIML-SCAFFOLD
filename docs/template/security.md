@@ -6,7 +6,7 @@ GitHub Actions uses Entra federated credentials and OIDC. Runtime services use m
 
 ## Resource boundaries
 
-The template distinguishes administrator-provided bootstrap resources from Terraform-owned project resources. Project identities receive only environment-resource-group permissions and the data-plane role required for the private evidence container. Subscription-level Owner is prohibited.
+The template distinguishes administrator-provided bootstrap resources from Terraform-owned project resources. The workspace system identity, project-created compute identity, and GitHub workflow identity have separate ownership and purposes. Storage uses identity-based authorization with Shared Key disabled. Data-plane roles are scoped to the project storage account only where the current training, registry, batch, or evidence operation requires them. Subscription-level Owner is prohibited.
 
 ## Network profiles
 
@@ -20,5 +20,6 @@ Foundry is outside R1. Generated evidence rejects sensitive metadata keys recurs
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.0.0-rc2 | 2026-08-07 | 2026-08-12 | Ray Swan / Codex | Documented identity-based workspace storage and separated workspace, compute, and workflow identity permissions. |
 | 1.0.0-rc1 | 2026-08-07 | 2026-08-11 | Ray Swan / Codex | Added R1 scoped identity, Dev network boundary, and evidence redaction controls. |
 | 0.1.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Initial template security policy. |

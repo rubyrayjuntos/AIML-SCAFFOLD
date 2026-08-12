@@ -207,10 +207,21 @@ Discovery completed at `2026-08-12T01:59:55Z`. It performed management-plane rea
 
 No backend reuse, identity reuse, federated credential change, role assignment, state write/lock, Terraform plan, package build, or candidate regeneration is authorized by this discovery record.
 
+## Bounded replacement correction: 2026-08-12
+
+Generation `f609...d027` and plan run `31623628917` remain immutable with disposition `rejected_before_apply`. Their binary plan and digest are ineligible for reuse.
+
+The replacement platform template now explicitly selects Azure ML identity-based default storage, retains the project workspace's system identity, creates a project-owned compute UAMI for model/MLflow storage operations, and declares purpose-scoped storage data roles and dependency ordering. It also replaces the incomplete two-file review artifact with schema `1.0`'s exact six-file set, structural sanitization, dual digests, provenance/backend/run binding, and action-summary verification. Platform tests and generated-repository static conformance pass locally. No replacement candidate has yet been published, planned, or applied.
+
+Current classification:
+
+> **R1 preview—bootstrap-live and OIDC-live conformant; workload-plan execution proven, current candidate rejected before apply; Azure ML Dev lifecycle not live validated.**
+
 ## Documentation changelog
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.8.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded local completion of the bounded AML identity/RBAC and versioned six-file plan-artifact correction; replacement generation and saved plan remain pending. |
 | 1.7.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded saved plan `31623628917`, its immutable digests and ten-create review, and rejection for the Azure ML AccessKey/shared-key contradiction plus incomplete artifact bundle. |
 | 1.6.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded the safe pre-plan initialization failure in run `31623045228` and invalidated generation `cc099e52...bb47ea` for workload planning pending an OIDC environment-contract correction. |
 | 1.5.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded replacement generation `cc099e52...bb47ea`, protected PR publication, passing main CI, and successful nonmutating OIDC proof. |

@@ -9,11 +9,11 @@ This ledger is updated as implementation gates are completed. It must distinguis
 | Evidence kernel | Versioned identity, URI conformance, idempotency, redaction, composite receipts, and invalid-timeline projection | Passed locally, including signed URI, sequence, transition, terminal ID/state/artifact/payload, context, identity-content, duplicate/conflicting receipt, cross-project, and ordering tests |
 | Generator | Two byte-identical outputs and deterministic receipt | Passed from two clean wheel builds and distinct Python 3.12 installation paths; runtime cache files are excluded from template enumeration and hashing |
 | Generated provenance | Source manifest, resolved plan, constraints, templates, and generated tree | Independently digest-verified by offline doctor |
-| Generated repository | Tests, Ruff, YAML, Terraform, workflow lint, dependency resolution, and secret scan | Passed locally: digest-bound plan/apply and OIDC workflows included; Ruff, YAML parse, actionlint, Terraform 4.81.0 init/validate, Python dependency and targeted secret/scenario checks passed |
+| Generated repository | Tests, Ruff, YAML, Terraform, workflow lint, dependency resolution, and secret scan | Replacement template passed locally: explicit identity-based AML storage, project-owned compute identity, purpose-scoped storage roles, six-file artifact schema, Ruff, YAML parse, actionlint, Terraform 4.81.0 init/validate, Python dependency and targeted credential/scenario checks |
 | Doctor hardening | Context, active/intended identity, backend management/data planes, shared-key posture, OIDC configuration, scoped RBAC, SKU/quota, and unexercised boundaries | Passed with mocked read-only Azure responses and negative paths; offline generated-project doctor passed |
 | Authenticated doctor | Real tenant/subscription context, resource group, backend, quotas, OIDC configuration, and RBAC | Bootstrap context, backend, OIDC configuration, and RBAC are live; GitHub OIDC proof run `31621923439` passed against replacement generation `cc099e52...bb47ea` |
 | Azure ML service schema | Pipeline compute/reference validation in a real workspace | Not executed; `az ml job validate` requires the not-yet-approved clean-room workspace |
-| Dev clean-room | Terraform apply, Azure ML run, registration, batch invocation, evidence, second clean plan | Workload plan run `31623628917` produced 10 creates and no destructive actions, but was rejected before apply for an Azure ML storage-auth contradiction and incomplete review artifact; workload remains unprovisioned |
+| Dev clean-room | Terraform apply, Azure ML run, registration, batch invocation, evidence, second clean plan | Workload plan run `31623628917` remains rejected and immutable. The bounded identity/RBAC and artifact-contract correction is locally conformant; replacement publication and saved-plan review are pending; workload remains unprovisioned. |
 | R1 release | Immutable package/template/workflow versions and compatibility matrix | Platform branch and generated candidates published through protected PRs; generated CI and read-only OIDC proof passed; current workload plan is rejected and no apply is authorized |
 
 ## Candidate lineage
@@ -35,6 +35,7 @@ For historical traceability, generation `857b...35bc6` used wheel digest `sha256
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.3.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded locally conformant identity-based AML storage, project-owned compute identity/RBAC, and the versioned six-file plan artifact contract pending replacement publication. |
 | 1.2.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded saved workload plan `31623628917`, immutable artifact evidence, and rejection before apply for storage authentication and artifact-contract defects. |
 | 1.1.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded safe workload-plan initialization failure `31623045228` and the generated AzureRM OIDC environment-contract correction. |
 | 1.0.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded deterministic cross-installer regeneration, protected publication of generation `cc099e52...bb47ea`, and successful nonmutating GitHub OIDC proof. |
