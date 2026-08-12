@@ -34,13 +34,33 @@ ml = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+exclude = ["aiml_scaffold.templates.azure_ml_batch.scripts.__pycache__"]
 
 [tool.setuptools.package-data]
 aiml_scaffold = [
-  "templates/**/*",
+  "templates/azure_ml_batch/*",
+  "templates/azure_ml_batch/.azure/*",
   "templates/azure_ml_batch/.github/workflows/*",
+  "templates/azure_ml_batch/config/*",
+  "templates/azure_ml_batch/data/*",
+  "templates/azure_ml_batch/data-science/environment/*",
+  "templates/azure_ml_batch/data-science/src/*",
   "templates/azure_ml_batch/.gitignore",
+  "templates/azure_ml_batch/infra/terraform/*",
   "templates/azure_ml_batch/infra/terraform/.terraform.lock.hcl",
+  "templates/azure_ml_batch/mlops/azureml/train/*",
+  "templates/azure_ml_batch/mlops/azureml/deploy/batch/*",
+  "templates/azure_ml_batch/mlops/azureml/deploy/batch/code/*",
+  "templates/azure_ml_batch/platform/*",
+  "templates/azure_ml_batch/scripts/*.py",
+  "templates/azure_ml_batch/tests/*.py",
+]
+
+[tool.setuptools.exclude-package-data]
+aiml_scaffold = [
+  "templates/azure_ml_batch/scripts/__pycache__/*",
+  "templates/**/__pycache__/*",
+  "templates/**/*.pyc",
 ]
 
 [tool.pytest.ini_options]

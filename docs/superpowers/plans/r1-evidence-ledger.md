@@ -27,6 +27,7 @@ This ledger is updated as implementation gates are completed. It must distinguis
 | `sha256:cc099e528c371fb448550f37103b024d8b107203c7878a66a371163e86bb47ea` | `oidc_read_only_proven_plan_invalidated` | OIDC proof `31621923439` passed; plan run `31623045228` then stopped at init because the workflow omitted AzureRM's OIDC environment contract | OIDC token plus authorized/denied reads only; no plan artifact or Azure ML workload mutation |
 | `sha256:f609615fd8706c19ee12a99a2d62732061e0d3f43dc172a44780bd836d87d027` | `saved_plan_rejected_for_apply` | Run `31623628917` saved a 10-create plan; review found workspace `AccessKey` mode incompatible with disabled storage shared keys and found the JSON review artifact absent | State lock/read and saved plan only; no apply or Azure ML workload mutation |
 | `sha256:12207f5bb4258460ad549669abd4f1b69f02491bb68f4bc3a3dcb72e6681cdab` | `saved_plan_review_passed_apply_not_authorized` | Run `31626134587` produced the complete six-file artifact and a reviewed 12-create, zero-destructive-action plan with explicit AML identity storage and project-owned compute RBAC | State lock/read and saved plan only; no apply or Azure ML workload mutation |
+| `sha256:7c9a4cf3b049d8ed3dce1974e9748273528d53c9154e485b0bec45b037162220` | `superseded_before_apply` | Run `31632608556` was technically reviewed but lacked the mandatory generated deployment-governance artifact; resources mutated: false | State lock/read and saved plan only; no apply or Azure ML workload mutation |
 
 This entry is immutable history and must not be overwritten by the replacement candidate. Read-only discovery subsequently confirmed the intended tenant/subscription and found a same-subscription backend candidate, but no suitable least-privilege R1 GitHub OIDC identity.
 
@@ -36,6 +37,7 @@ For historical traceability, generation `857b...35bc6` used wheel digest `sha256
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.5.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Retired generation `7c9a4cf3...162220` and run `31632608556` before apply because the mandatory deployment-governance artifact was absent; no resources were mutated. |
 | 1.4.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded replacement generation `12207f5b...1cdab`, protected publication, saved-plan run `31626134587`, complete artifact verification, and successful pre-apply infrastructure review. |
 | 1.3.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded locally conformant identity-based AML storage, project-owned compute identity/RBAC, and the versioned six-file plan artifact contract pending replacement publication. |
 | 1.2.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded saved workload plan `31623628917`, immutable artifact evidence, and rejection before apply for storage authentication and artifact-contract defects. |

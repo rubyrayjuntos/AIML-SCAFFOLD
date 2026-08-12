@@ -52,6 +52,8 @@ Verify that `platform/source-manifest.yaml`, `platform/resolved-plan.json`, and 
 
 Release candidates must supply the full source commit of the platform package and the SHA-256 digest of the exact wheel used to generate them. Generated live workflows reject receipts without both fields.
 
+The generated `.azure/deployment-plan.md` intentionally starts at `Planning`. Its validation proof and `.azure/validate-status.json` are mutable governance evidence and therefore excluded from the generated-files digest. Do not treat that exclusion as authorization to bypass review: the validated files must be committed through protected product PR/CI, and the saved-plan artifact records and later rechecks both SHA-256 digests. Run the Azure validation workflow before dispatching Terraform plan; the plan workflow rejects any status other than `Validated` or any workflow state other than `UpdateStatus`.
+
 ## Live boundary
 
 Authenticated `doctor` is read-only. Terraform apply, Azure ML job submission, endpoint changes, invocation, and resource destruction require separate approval. Local or static success must not be recorded as Dev-live evidence.
@@ -60,6 +62,7 @@ Authenticated `doctor` is read-only. Terraform apply, Azure ML job submission, e
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.0.0-rc5 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Documented the mutable deployment-validation evidence boundary and mandatory saved-plan digest binding. |
 | 1.0.0-rc4 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Required exact platform source-commit and wheel-digest provenance for release-candidate generation. |
 | 1.0.0-rc3 | 2026-08-11 | 2026-08-11 | Ray Swan / Codex | Documented explicit Azure context, deployment identity configuration, tri-state doctor outcomes, and unexercised OIDC/write boundaries. |
 | 1.0.0-rc2 | 2026-08-11 | 2026-08-11 | Ray Swan / Codex | Added maturity review, provenance verification, and constrained generated-project installation. |

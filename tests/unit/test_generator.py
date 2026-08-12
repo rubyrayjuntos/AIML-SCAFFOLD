@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import shutil
+import tomllib
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import ModuleType
@@ -113,6 +114,12 @@ def test_generated_project_is_r1_batch_only(
         allow_experimental=True,
     )
     assert (output / "infra/terraform/main.tf").is_file()
+    deployment_plan = output / ".azure/deployment-plan.md"
+    assert deployment_plan.is_file()
+    deployment_plan_text = deployment_plan.read_text(encoding="utf-8")
+    assert "> **Status:** Planning" in deployment_plan_text
+    assert "Pure Terraform through the protected saved-plan workflow" in deployment_plan_text
+    assert "azd or Bicep" in deployment_plan_text
     assert (output / "mlops/azureml/deploy/batch/deployment.yml").is_file()
     assert not (output / "infra/bicep").exists()
     assert not (output / "foundry").exists()
@@ -134,6 +141,23 @@ def test_generated_project_is_r1_batch_only(
     assert doctor["project"] == manifest_payload["product"]["name"]
 
 
+def test_wheel_package_data_includes_hidden_deployment_plan_template() -> None:
+    setuptools = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["tool"][
+        "setuptools"
+    ]
+    assert "aiml_scaffold.templates.azure_ml_batch.scripts.__pycache__" in setuptools[
+        "packages"
+    ]["find"]["exclude"]
+    package_data = setuptools["package-data"]["aiml_scaffold"]
+    assert "templates/**/*" not in package_data
+    assert "templates/azure_ml_batch/.azure/*" in package_data
+    assert "templates/azure_ml_batch/scripts/*.py" in package_data
+    excluded = setuptools["exclude-package-data"]["aiml_scaffold"]
+    assert "templates/azure_ml_batch/scripts/__pycache__/*" in excluded
+    assert "templates/**/__pycache__/*" in excluded
+    assert "templates/**/*.pyc" in excluded
+
+
 def test_generated_terraform_uses_identity_storage_and_project_owned_compute_identity(
     tmp_path: Path, manifest_payload: dict
 ) -> None:
@@ -147,8 +171,10 @@ def test_generated_terraform_uses_identity_storage_and_project_owned_compute_ide
     assert 'storage_account_access_type   = "Identity"' in terraform
     assert 'resource "azurerm_user_assigned_identity" "compute"' in terraform
     assert 'resource "azurerm_role_assignment" "compute_storage"' in terraform
+    assert 'resource "azurerm_role_assignment" "workspace_storage"' in terraform
     assert 'resource "azurerm_role_assignment" "workflow_storage"' in terraform
     assert "azurerm_user_assigned_identity.compute.principal_id" in terraform
+    assert "azurerm_machine_learning_workspace.this.identity[0].principal_id" in terraform
     assert "scope                            = azurerm_storage_account.this.id" in terraform
     assert 'type         = "UserAssigned"' in terraform
     assert "depends_on = [azurerm_role_assignment.compute_storage]" in terraform
@@ -200,6 +226,8 @@ def test_generated_workflows_enforce_digest_bound_manual_apply(
     assert "current-state.json" in apply
     assert "apply-authorization-and-result.json" in apply
     assert "pre-plan-state.json" in plan
+    assert "deployment plan status is not Validated" in artifact_script
+    assert '"completedStep": "UpdateStatus"' in artifact_script
     assert any(
         line.strip().startswith('--state-key "') and line.rstrip().endswith("\\")
         for line in plan.splitlines()
@@ -269,6 +297,8 @@ def test_plan_artifact_sanitization_and_integrity_contract(
         "source_commit": "a" * 40,
         "platform_source_commit": "c" * 40,
         "platform_package_digest": "sha256:" + "d" * 64,
+        "deployment_plan_digest": "sha256:" + "e" * 64,
+        "validation_status_digest": "sha256:" + "f" * 64,
         "generation_id": "sha256:" + "b" * 64,
         "target_environment": "dev",
         "terraform_plan_digest": plan_digest,
@@ -291,6 +321,8 @@ def test_plan_artifact_sanitization_and_integrity_contract(
         "source_commit": approval["source_commit"],
         "platform_source_commit": approval["platform_source_commit"],
         "platform_package_digest": approval["platform_package_digest"],
+        "deployment_plan_digest": approval["deployment_plan_digest"],
+        "validation_status_digest": approval["validation_status_digest"],
         "generation_id": approval["generation_id"],
         "tenant_id": "00000000-0000-0000-0000-000000000000",
         "subscription_id": "11111111-1111-1111-1111-111111111111",
@@ -373,6 +405,63 @@ def test_generated_receipt_remains_valid_after_git_metadata_is_created(
     git_metadata.mkdir()
     (git_metadata / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
     assert verify_generation(output)["generation_id"] == receipt["generation_id"]
+
+
+def test_mutable_deployment_validation_evidence_is_source_commit_bound_not_tree_bound(
+    tmp_path: Path, manifest_payload: dict
+) -> None:
+    output = tmp_path / "project"
+    _, receipt = generate_project(
+        ProductManifest.model_validate(manifest_payload),
+        output,
+        allow_experimental=True,
+        platform_source_commit="a" * 40,
+        platform_package_digest="sha256:" + "b" * 64,
+    )
+    plan = output / ".azure/deployment-plan.md"
+    plan.write_text(
+        plan.read_text(encoding="utf-8").replace(
+            "> **Status:** Planning", "> **Status:** Ready for Validation"
+        ),
+        encoding="utf-8",
+        newline="\n",
+    )
+    (output / ".azure/validate-status.json").write_text(
+        '{"completedStep":"LoadPlan"}\n', encoding="utf-8", newline="\n"
+    )
+    assert verify_generation(output)["generation_id"] == receipt["generation_id"]
+    generated_verifier = _load_module(output / "scripts/verify_generation.py")
+    assert generated_verifier.verify(output)["generation_id"] == receipt["generation_id"]
+
+
+def test_saved_plan_requires_completed_deployment_validation(
+    tmp_path: Path, manifest_payload: dict
+) -> None:
+    output = tmp_path / "project"
+    generate_project(
+        ProductManifest.model_validate(manifest_payload),
+        output,
+        allow_experimental=True,
+    )
+    artifact_module = _load_module(output / "scripts/plan_artifact.py")
+    with pytest.raises(ValueError, match="status is not Validated"):
+        artifact_module._validated_deployment_governance(output)
+
+    plan = output / ".azure/deployment-plan.md"
+    validated = (
+        plan.read_text(encoding="utf-8")
+        .replace("> **Status:** Planning", "> **Status:** Validated")
+        .replace("Not yet executed.", "Completed by azure-validate.")
+        .replace("Not yet validated.", "azure-validate workflow complete.")
+    )
+    plan.write_text(validated, encoding="utf-8", newline="\n")
+    status = output / ".azure/validate-status.json"
+    status.write_text(
+        '{"completedStep":"UpdateStatus"}\n', encoding="utf-8", newline="\n"
+    )
+    governance = artifact_module._validated_deployment_governance(output)
+    assert governance["deployment_plan_digest"] == artifact_module._sha256(plan)
+    assert governance["validation_status_digest"] == artifact_module._sha256(status)
 
 
 def test_modified_generated_tree_fails_receipt_check(

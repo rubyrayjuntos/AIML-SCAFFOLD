@@ -120,6 +120,16 @@ resource "azurerm_role_assignment" "compute_storage" {
   skip_service_principal_aad_check = true
 }
 
+# Identity-based access to the workspace default storage requires an explicit
+# data-plane assignment for the workspace's system-assigned identity.
+resource "azurerm_role_assignment" "workspace_storage" {
+  scope                            = azurerm_storage_account.this.id
+  role_definition_id               = data.azurerm_role_definition.blob_contributor.id
+  principal_id                     = azurerm_machine_learning_workspace.this.identity[0].principal_id
+  principal_type                   = "ServicePrincipal"
+  skip_service_principal_aad_check = true
+}
+
 resource "azurerm_role_assignment" "workflow_storage" {
   scope              = azurerm_storage_account.this.id
   role_definition_id = data.azurerm_role_definition.blob_contributor.id

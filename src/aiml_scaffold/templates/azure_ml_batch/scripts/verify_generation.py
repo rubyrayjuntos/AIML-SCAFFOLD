@@ -11,6 +11,10 @@ from typing import Any
 import yaml
 
 RECEIPT_NAME = "generation-receipt.json"
+MUTABLE_GOVERNANCE_PATHS = {
+    ".azure/deployment-plan.md",
+    ".azure/validate-status.json",
+}
 IGNORED_RUNTIME_PARTS = {".git", ".terraform", ".pytest_cache", ".ruff_cache", "__pycache__"}
 
 
@@ -29,6 +33,8 @@ def generated_files_digest(root: Path) -> str:
         relative_path = path.relative_to(root)
         relative = relative_path.as_posix()
         if relative == RECEIPT_NAME:
+            continue
+        if relative in MUTABLE_GOVERNANCE_PATHS:
             continue
         if any(part in IGNORED_RUNTIME_PARTS for part in relative_path.parts):
             continue

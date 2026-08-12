@@ -263,16 +263,19 @@ Replacement plan run `31632141125` produced the complete six-file artifact with 
 | Compute and Dev posture | Training and batch clusters use `Standard_D4s_v5`, min nodes `0`, max nodes `4`; public node IP and local auth remain Dev-only warnings |
 | Apply | Not dispatched; no infrastructure mutation occurred |
 
-Disposition: `governance_hardened_saved_plan_review_passed_apply_not_authorized`.
+Disposition: `superseded_before_apply`.
+
+Reason: the mandatory generated `.azure/deployment-plan.md` governance prerequisite was absent. The saved artifact remains immutable evidence, but it is ineligible for apply. `resources_mutated: false`.
 
 Current classification:
 
-> **R1 preview—bootstrap-live, OIDC-live, and governance-hardened workload-plan-live conformant; reviewed workload plan saved; apply not authorized; Azure ML Dev lifecycle not live validated.**
+> **R1 preview—bootstrap-live and OIDC-live conformant; prior workload plan superseded before apply; deployment-plan factory integration and replacement saved-plan review in progress; Azure ML Dev lifecycle not live validated.**
 
 ## Documentation changelog
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.14.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Retired run `31632608556` as `superseded_before_apply` because the mandatory deployment-governance artifact was absent; confirmed no resources were mutated. |
 | 1.13.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded final governance-hardened generation, protected publication, saved-plan run `31632608556`, provenance/expiry/state binding, independent JSON and live state verification, infrastructure review, and no-apply stop. |
 | 1.12.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded saved plan `31632141125`, its safe apply-path verification failure, and the bounded nested-state/backend-HCL verifier correction. |
 | 1.11.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded safe negative plan run `31631623498`, the shell-continuation root cause, candidate invalidation, and no-apply boundary. |

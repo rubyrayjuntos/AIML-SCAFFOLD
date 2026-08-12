@@ -14,6 +14,10 @@ from platform_core.contracts.project_plan import ResolvedProjectPlan
 from platform_core.contracts.resolver import resolve_project_plan
 
 RECEIPT_NAME = "generation-receipt.json"
+MUTABLE_GOVERNANCE_PATHS = {
+    ".azure/deployment-plan.md",
+    ".azure/validate-status.json",
+}
 IGNORED_RUNTIME_PARTS = {
     ".git",
     ".terraform",
@@ -69,6 +73,8 @@ def generated_files_digest(root: Path) -> str:
     for path in sorted(file for file in root.rglob("*") if file.is_file()):
         relative = path.relative_to(root).as_posix()
         if relative == RECEIPT_NAME:
+            continue
+        if relative in MUTABLE_GOVERNANCE_PATHS:
             continue
         if any(part in IGNORED_RUNTIME_PARTS for part in path.relative_to(root).parts):
             continue
@@ -162,6 +168,7 @@ def generate_project(
         "manifest": manifest.canonical_dict(),
         "plan": plan.canonical_dict(),
         "project_name": manifest.product.name,
+        "product_display_name": manifest.product.display_name or manifest.product.name,
         "project_python_name": manifest.product.name.replace("-", "_"),
         "environment": environment,
         "location": plan.applied_defaults["location"],
