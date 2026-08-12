@@ -105,7 +105,9 @@ def _configure_authenticated_doctor(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_offline_doctor_uses_not_exercised_for_cloud_checks(
     generated_project: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setattr(doctor_module.shutil, "which", lambda _: "/usr/bin/tool")
     result = doctor_module.doctor_project(
         generated_project, "dev", cloud_checks=False
     )

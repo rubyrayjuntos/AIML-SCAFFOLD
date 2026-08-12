@@ -50,7 +50,10 @@ def test_generation_refuses_non_empty_output(tmp_path: Path, manifest_payload: d
         )
 
 
-def test_generated_project_is_r1_batch_only(tmp_path: Path, manifest_payload: dict) -> None:
+def test_generated_project_is_r1_batch_only(
+    tmp_path: Path, manifest_payload: dict, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("aiml_scaffold.doctor.shutil.which", lambda _: "/usr/bin/tool")
     manifest_payload["product"]["display_name"] = "Example Risk"
     output = tmp_path / "project"
     generate_project(
@@ -107,6 +110,9 @@ def test_generated_workflows_enforce_digest_bound_manual_apply(
     assert "workflow_dispatch:" in smoke
     assert "az account get-access-token" in smoke
     assert "terraform apply" not in smoke
+    for workflow in (plan, apply, smoke):
+        assert "pip install -c constraints.txt pyyaml" in workflow
+        assert "pyyaml==6.0.3" not in workflow
 
 
 def test_generated_receipt_remains_valid_after_git_metadata_is_created(
