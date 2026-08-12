@@ -204,6 +204,7 @@ def test_generated_workflows_enforce_digest_bound_manual_apply(
         line.strip().startswith('--state-key "') and line.rstrip().endswith("\\")
         for line in plan.splitlines()
     )
+    assert "for key, backend_key in backend_keys.items()" in artifact_script
     assert "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093" in apply
     assert "terraform plan" not in apply
     assert "approved-plan/r1.tfplan" in apply

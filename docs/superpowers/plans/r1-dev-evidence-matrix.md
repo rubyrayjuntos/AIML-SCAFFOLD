@@ -245,6 +245,8 @@ The reviewed candidate remains immutable evidence, but it is superseded for any 
 
 Governance-hardened plan run `31631623498` reached authenticated initialization, captured the empty pre-plan state identity, and created the Terraform plan, then stopped before artifact publication because the generated shell command omitted a continuation before `--state-snapshot`. No apply occurred. The run is retained as negative workflow evidence and its generation is ineligible for apply; the defect must be corrected in the platform template and regenerated.
 
+Replacement plan run `31632141125` produced the complete six-file artifact with 12 creates and no update, replacement, or delete. Independent apply-path verification then rejected it before apply because the backend HCL verifier attempted to map the nested state-identity object as an HCL backend field. This plan also remains immutable negative evidence and is ineligible for apply. State identity remains a separately validated manifest contract; only resource group, storage account, container, and key are compared to generated backend HCL.
+
 Current classification:
 
 > **R1 preview—bootstrap-live, OIDC-live, and workload-plan-live conformant; reviewed workload plan saved; apply not authorized; Azure ML Dev lifecycle not live validated.**
@@ -253,6 +255,7 @@ Current classification:
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.12.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded saved plan `31632141125`, its safe apply-path verification failure, and the bounded nested-state/backend-HCL verifier correction. |
 | 1.11.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded safe negative plan run `31631623498`, the shell-continuation root cause, candidate invalidation, and no-apply boundary. |
 | 1.10.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Preserved saved plan `31626134587` as immutable reviewed evidence but superseded it for apply pending provenance, expiry, state, context, actor, and apply-result hardening. |
 | 1.9.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded replacement generation `12207f5b...1cdab`, protected publication, saved-plan run `31626134587`, six-file artifact digests, independent JSON derivation, successful infrastructure review, and no-apply stop. |
