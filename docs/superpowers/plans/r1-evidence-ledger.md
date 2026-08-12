@@ -13,7 +13,7 @@ This ledger is updated as implementation gates are completed. It must distinguis
 | Doctor hardening | Context, active/intended identity, backend management/data planes, shared-key posture, OIDC configuration, scoped RBAC, SKU/quota, and unexercised boundaries | Passed with mocked read-only Azure responses and negative paths; offline generated-project doctor passed |
 | Authenticated doctor | Real tenant/subscription context, resource group, backend, quotas, OIDC configuration, and RBAC | Bootstrap context, backend, OIDC configuration, and RBAC are live; GitHub OIDC proof run `31621923439` passed against replacement generation `cc099e52...bb47ea` |
 | Azure ML service schema | Pipeline compute/reference validation in a real workspace | Not executed; `az ml job validate` requires the not-yet-approved clean-room workspace |
-| Dev clean-room | Terraform apply, Azure ML run, registration, batch invocation, evidence, second clean plan | Bootstrap-only Terraform apply and clean second plan passed; generated Azure ML workload remains ungenerated and unexecuted |
+| Dev clean-room | Terraform apply, Azure ML run, registration, batch invocation, evidence, second clean plan | Bootstrap-only Terraform apply and clean second plan passed; generated Azure ML workload remains unprovisioned and unexecuted |
 | R1 release | Immutable package/template/workflow versions and compatibility matrix | Platform branch and replacement candidate published through protected PR; generated CI and read-only OIDC proof passed; Azure ML workload planning remains approval-gated |
 
 ## Candidate lineage
@@ -28,7 +28,7 @@ This ledger is updated as implementation gates are completed. It must distinguis
 
 This entry is immutable history and must not be overwritten by the replacement candidate. Read-only discovery subsequently confirmed the intended tenant/subscription and found a same-subscription backend candidate, but no suitable least-privilege R1 GitHub OIDC identity.
 
-The eligible wheel is `enterprise_ml_workflow-0.1.0-py3-none-any.whl` with digest `sha256:331e924e069c6ca2b5819076e329bdac85d77684b24dcf8fa4f1b8027e90c837`. Two builds from independent clean `git archive` exports of commit `35356bc` with the same source epoch were byte-identical. The replacement candidate's manifest, resolved-plan, template, and generated-files digests are respectively `sha256:3f5ebc4abd5e375cbaf2edbb2404427e565b9736226020cff4a45c78ff289cda`, `sha256:d97dc85d30452c4e94aab99194a724286579890d20e98620b6c52eda691bbab3`, `sha256:8fe6dfb2ef63bfea94fa4bee96b243271b1c6e3e275bf0750ac9ea98f2d98425`, and `sha256:0c3573397127038fdc448b441c66a5169b014522821e0cf3d192704864c838f1`.
+For historical traceability, generation `857b...35bc6` used wheel digest `sha256:331e924e069c6ca2b5819076e329bdac85d77684b24dcf8fa4f1b8027e90c837` from commit `35356bc`. Its manifest, resolved-plan, template, and generated-files digests were respectively `sha256:3f5ebc4abd5e375cbaf2edbb2404427e565b9736226020cff4a45c78ff289cda`, `sha256:d97dc85d30452c4e94aab99194a724286579890d20e98620b6c52eda691bbab3`, `sha256:8fe6dfb2ef63bfea94fa4bee96b243271b1c6e3e275bf0750ac9ea98f2d98425`, and `sha256:0c3573397127038fdc448b441c66a5169b014522821e0cf3d192704864c838f1`. It is not the current candidate.
 
 ## Documentation changelog
 
