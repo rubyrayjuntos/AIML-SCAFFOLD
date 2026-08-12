@@ -51,6 +51,26 @@ This matrix must be completed with independently verifiable Dev evidence. Creati
 
 No Test or Prod claim may inherit evidence from this Dev matrix.
 
+## Replacement publication candidate: 2026-08-12
+
+| Evidence | Sanitized result |
+|---|---|
+| Platform source commit | `35356bc` |
+| Installed distribution | `enterprise-ml-workflow` `0.1.0` in a clean virtual environment |
+| Reproducible wheel digest | `sha256:331e924e069c6ca2b5819076e329bdac85d77684b24dcf8fa4f1b8027e90c837`; two independent clean-archive builds matched |
+| Generation ID | `sha256:857b86e6b8566765d3b780549a52100092fc3479d679ac961d5c22c73a835bc6` |
+| Manifest digest | `sha256:3f5ebc4abd5e375cbaf2edbb2404427e565b9736226020cff4a45c78ff289cda` |
+| Resolved-plan digest | `sha256:d97dc85d30452c4e94aab99194a724286579890d20e98620b6c52eda691bbab3` |
+| Template digest | `sha256:8fe6dfb2ef63bfea94fa4bee96b243271b1c6e3e275bf0750ac9ea98f2d98425` |
+| Generated-files digest | `sha256:0c3573397127038fdc448b441c66a5169b014522821e0cf3d192704864c838f1` |
+| Determinism | Two independent generations from the installed clean wheel were byte-identical |
+| Offline doctor | Passed; cloud and OIDC checks correctly reported `not_exercised` |
+| Workflow conformance | YAML parse and actionlint passed for CI, plan, apply, training, batch deployment, and OIDC smoke workflows |
+| Approval contract | `manual_dispatch_with_plan_digest`; apply consumes the reviewed artifact without replanning; independent human reviewer separation unavailable |
+| Publication state | Local candidate only; initial source push and branch protection pending |
+
+An earlier wheel built directly from the long-lived worktree was rejected because an ignored stale build artifact entered the wheel. It produced generation `sha256:fbcc524f7a2cd2b108dcc6e87d1dc88d802597a4e2b9bb53adf643c0958dc813`, which is permanently invalidated and was never pushed. Clean archive builds are now the evidence source.
+
 ## Bootstrap deployment: 2026-08-11
 
 The approved bootstrap completed against the remote Entra-authenticated backend. The state container was created privately, imported before planning, and retained throughout. The original saved plan contained 13 creates and one imported-container no-op, with zero changes/deletes and no Owner assignment. GitHub rejected the required-reviewer rule for the private repository because the current billing plan does not support it. Existing resources and state were preserved; a corrective plan containing only the Dev environment and four identifier-only secrets completed successfully.
@@ -144,6 +164,7 @@ No backend reuse, identity reuse, federated credential change, role assignment, 
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.2.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded the reproducible clean wheel, eligible replacement generation and digests, offline validation, and invalidated contaminated local-build candidate. |
 | 1.1.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Corrected the current deployment-identity summary and recorded the locally implemented digest-bound manual approval fallback. |
 | 1.0.0 | 2026-08-11 | 2026-08-11 | Ray Swan / Codex | Recorded live bootstrap apply, independent GitHub/Entra/Azure/RBAC verification, clean second plan, and the unsupported GitHub required-reviewer release gate. |
 | 0.9.0 | 2026-08-11 | 2026-08-11 | Ray Swan / Codex | Recorded generated Terraform, pinned providers, static validation, protected-environment reviewer constraint, and pending deployment-risk acknowledgement. |
