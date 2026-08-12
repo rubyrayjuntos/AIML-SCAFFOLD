@@ -22,6 +22,8 @@ aiml-scaffold plan examples/manifests/r1-ml-batch.yaml \
   --allow-experimental
 aiml-scaffold generate examples/manifests/r1-ml-batch.yaml \
   --output /tmp/example-risk \
+  --platform-source-commit "$PLATFORM_SOURCE_COMMIT" \
+  --platform-package-digest "$PLATFORM_PACKAGE_DIGEST" \
   --allow-experimental
 aiml-scaffold doctor /tmp/example-risk --environment dev --no-cloud
 ```
@@ -48,6 +50,8 @@ Also parse all YAML, scan for secrets and scenario leakage, generate a second in
 
 Verify that `platform/source-manifest.yaml`, `platform/resolved-plan.json`, and `constraints.txt` are tracked by the generated-files digest and independently attested by `generation-receipt.json`. Do not edit these files in a generated repository; change the source manifest or platform template and regenerate.
 
+Release candidates must supply the full source commit of the platform package and the SHA-256 digest of the exact wheel used to generate them. Generated live workflows reject receipts without both fields.
+
 ## Live boundary
 
 Authenticated `doctor` is read-only. Terraform apply, Azure ML job submission, endpoint changes, invocation, and resource destruction require separate approval. Local or static success must not be recorded as Dev-live evidence.
@@ -56,6 +60,7 @@ Authenticated `doctor` is read-only. Terraform apply, Azure ML job submission, e
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.0.0-rc4 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Required exact platform source-commit and wheel-digest provenance for release-candidate generation. |
 | 1.0.0-rc3 | 2026-08-11 | 2026-08-11 | Ray Swan / Codex | Documented explicit Azure context, deployment identity configuration, tri-state doctor outcomes, and unexercised OIDC/write boundaries. |
 | 1.0.0-rc2 | 2026-08-11 | 2026-08-11 | Ray Swan / Codex | Added maturity review, provenance verification, and constrained generated-project installation. |
 | 1.0.0-rc1 | 2026-08-11 | 2026-08-11 | Ray Swan / Codex | Initial local generation and static conformance runbook. |

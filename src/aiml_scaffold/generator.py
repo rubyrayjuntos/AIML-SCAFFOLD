@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -109,15 +110,17 @@ def verify_generation(root: Path) -> dict[str, Any]:
                 f"generation receipt {field} mismatch: receipt={receipt.get(field)} "
                 f"actual={digest}"
             )
-    expected_generation_id = _digest_json(
-        {
+    generation_identity = {
             "platform_version": receipt["platform_version"],
             "manifest_digest": expected["manifest_digest"],
             "resolved_plan_digest": expected["resolved_plan_digest"],
             "template_digest": expected["template_digest"],
             "generated_files_digest": actual,
-        }
-    )
+    }
+    for field in ("platform_source_commit", "platform_package_digest"):
+        if field in receipt:
+            generation_identity[field] = receipt[field]
+    expected_generation_id = _digest_json(generation_identity)
     if receipt.get("generation_id") != expected_generation_id:
         raise ValueError("generation receipt generation_id mismatch")
     return receipt
@@ -129,7 +132,21 @@ def generate_project(
     *,
     environment: str = "dev",
     allow_experimental: bool = False,
+    platform_source_commit: str | None = None,
+    platform_package_digest: str | None = None,
 ) -> tuple[ResolvedProjectPlan, dict[str, Any]]:
+    if (platform_source_commit is None) != (platform_package_digest is None):
+        raise ValueError(
+            "platform source commit and package digest must be supplied together"
+        )
+    if platform_source_commit is not None and not re.fullmatch(
+        r"[0-9a-f]{40}", platform_source_commit
+    ):
+        raise ValueError("platform source commit must be a full lowercase Git commit")
+    if platform_package_digest is not None and not re.fullmatch(
+        r"sha256:[0-9a-f]{64}", platform_package_digest
+    ):
+        raise ValueError("platform package digest must be a sha256 digest")
     if not template_root().is_dir():
         raise TemplateNotFound(str(template_root()))
     if output.exists() and not output.is_dir():
@@ -204,15 +221,17 @@ def generate_project(
     manifest_digest = _digest_json(source_manifest)
     plan_digest = _digest_json(plan.canonical_dict())
     source_template_digest = template_digest()
-    generation_id = _digest_json(
-        {
+    generation_identity = {
             "platform_version": manifest.platform_version,
             "manifest_digest": manifest_digest,
             "resolved_plan_digest": plan_digest,
             "template_digest": source_template_digest,
             "generated_files_digest": files_digest,
-        }
-    )
+    }
+    if platform_source_commit is not None:
+        generation_identity["platform_source_commit"] = platform_source_commit
+        generation_identity["platform_package_digest"] = platform_package_digest
+    generation_id = _digest_json(generation_identity)
     receipt = {
         "receipt_schema_version": "1.0",
         "platform_version": manifest.platform_version,
@@ -227,6 +246,9 @@ def generate_project(
         "capabilities": ["ml"],
         "providers": plan.providers,
     }
+    if platform_source_commit is not None:
+        receipt["platform_source_commit"] = platform_source_commit
+        receipt["platform_package_digest"] = platform_package_digest
     (output / RECEIPT_NAME).write_text(
         json.dumps(receipt, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",

@@ -41,6 +41,8 @@ def build_parser() -> argparse.ArgumentParser:
     generate.add_argument("manifest", type=Path)
     generate.add_argument("--environment", default="dev")
     generate.add_argument("--output", type=Path, required=True)
+    generate.add_argument("--platform-source-commit")
+    generate.add_argument("--platform-package-digest")
     _add_experimental_flag(generate)
 
     doctor = subparsers.add_parser("doctor")
@@ -132,6 +134,8 @@ def main(argv: list[str] | None = None) -> int:
                 args.output,
                 environment=args.environment,
                 allow_experimental=args.allow_experimental,
+                platform_source_commit=args.platform_source_commit,
+                platform_package_digest=args.platform_package_digest,
             )
             print(
                 json.dumps(

@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import shutil
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import ModuleType
 
@@ -45,6 +46,36 @@ def test_generation_is_byte_stable(tmp_path: Path, manifest_payload: dict) -> No
     assert first_receipt == second_receipt
     assert verify_generation(first)["generation_id"] == first_receipt["generation_id"]
     assert not any("__pycache__" in path.parts for path in first.rglob("*"))
+
+
+def test_generation_binds_platform_source_and_package(
+    tmp_path: Path, manifest_payload: dict
+) -> None:
+    output = tmp_path / "project"
+    _, receipt = generate_project(
+        ProductManifest.model_validate(manifest_payload),
+        output,
+        allow_experimental=True,
+        platform_source_commit="a" * 40,
+        platform_package_digest="sha256:" + "b" * 64,
+    )
+    assert receipt["platform_source_commit"] == "a" * 40
+    assert receipt["platform_package_digest"] == "sha256:" + "b" * 64
+    assert verify_generation(output)["generation_id"] == receipt["generation_id"]
+    generated_verifier = _load_module(output / "scripts/verify_generation.py")
+    assert generated_verifier.verify(output)["generation_id"] == receipt["generation_id"]
+
+
+def test_generation_rejects_partial_platform_provenance(
+    tmp_path: Path, manifest_payload: dict
+) -> None:
+    with pytest.raises(ValueError, match="must be supplied together"):
+        generate_project(
+            ProductManifest.model_validate(manifest_payload),
+            tmp_path / "project",
+            allow_experimental=True,
+            platform_source_commit="a" * 40,
+        )
 
 
 def test_template_digest_ignores_runtime_cache_files(tmp_path: Path) -> None:
@@ -163,6 +194,12 @@ def test_generated_workflows_enforce_digest_bound_manual_apply(
     assert "scripts/plan_artifact.py create" in plan
     assert "scripts/plan_artifact.py verify" in apply
     assert "reviewed_plan_digest:" in apply
+    assert "reviewed_json_digest:" in apply
+    assert "approval_reason:" in apply
+    assert "APPLY_AUTHORIZED_ACTORS" in apply
+    assert "current-state.json" in apply
+    assert "apply-authorization-and-result.json" in apply
+    assert "pre-plan-state.json" in plan
     assert "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093" in apply
     assert "terraform plan" not in apply
     assert "approved-plan/r1.tfplan" in apply
@@ -225,6 +262,8 @@ def test_plan_artifact_sanitization_and_integrity_contract(
     approval = {
         "approval_contract_version": "1.0",
         "source_commit": "a" * 40,
+        "platform_source_commit": "c" * 40,
+        "platform_package_digest": "sha256:" + "d" * 64,
         "generation_id": "sha256:" + "b" * 64,
         "target_environment": "dev",
         "terraform_plan_digest": plan_digest,
@@ -234,10 +273,19 @@ def test_plan_artifact_sanitization_and_integrity_contract(
         "plan_requested_by": "operator",
     }
     module._write_json(artifact / "approval-metadata.json", approval)
+    created_at = datetime.now(UTC)
+    state_snapshot = tmp_path / "state.json"
+    module._write_json(state_snapshot, {"state_absent": True})
+    state_identity = module._state_identity(state_snapshot)
     manifest = {
         "artifact_manifest_schema_version": "1.0",
+        "created_at": created_at.isoformat(),
+        "expires_at": (created_at + timedelta(days=30)).isoformat(),
+        "maximum_plan_age_hours": 720,
         "expected_files": sorted(module.EXPECTED_FILES),
         "source_commit": approval["source_commit"],
+        "platform_source_commit": approval["platform_source_commit"],
+        "platform_package_digest": approval["platform_package_digest"],
         "generation_id": approval["generation_id"],
         "tenant_id": "00000000-0000-0000-0000-000000000000",
         "subscription_id": "11111111-1111-1111-1111-111111111111",
@@ -247,6 +295,9 @@ def test_plan_artifact_sanitization_and_integrity_contract(
         "terraform_plan_digest": plan_digest,
         "sanitized_plan_digest": json_digest,
         "action_summary": module._action_summary(sanitized),
+        "backend": {
+            "state": state_identity
+        },
     }
     manifest["files"] = {
         name: module._sha256(artifact / name)
@@ -259,7 +310,18 @@ def test_plan_artifact_sanitization_and_integrity_contract(
         expected_run_attempt="1",
         expected_environment="dev",
         reviewed_plan_digest=plan_digest,
+        reviewed_json_digest=json_digest,
+        expected_tenant_id=manifest["tenant_id"],
+        expected_subscription_id=manifest["subscription_id"],
+        current_state_snapshot=state_snapshot,
     )
+
+    module._write_json(state_snapshot, {"lineage": "changed", "serial": 1})
+    with pytest.raises(ValueError, match="backend_state_unchanged"):
+        module.verify_artifact(artifact, current_state_snapshot=state_snapshot)
+
+    with pytest.raises(ValueError, match="not_expired"):
+        module.verify_artifact(artifact, now=created_at + timedelta(days=31))
 
     extra = tmp_path / "extra"
     shutil.copytree(artifact, extra)

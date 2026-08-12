@@ -25,12 +25,13 @@ The R1 manifest references centrally administered Terraform state and identity p
 
 No R1 CLI command deploys or destroys resources. Failure rollback preserves Terraform state and evidence. Any corrective apply or disposable-environment destroy requires a reviewed plan and explicit approval.
 
-When native GitHub required reviewers are unavailable, R1 uses `manual_dispatch_with_plan_digest`: the plan workflow publishes the binary plan, its structurally sanitized JSON representation, dual digests, approval metadata, and a versioned artifact manifest. Apply requires the exact reviewed digest, source commit, generation identity, target environment, backend/state identity, consistent action summary, and confirmation phrase. This is deliberate manual authorization, but it does not claim independent separation of duties when one person is the only operator.
+When native GitHub required reviewers are unavailable, R1 uses `manual_dispatch_with_plan_digest`: the plan workflow publishes the binary plan, its structurally sanitized JSON representation, dual digests, approval metadata, and a versioned artifact manifest. The manifest also records expiry, platform package/source provenance, Azure context, and the pre-plan state lineage, serial, and digest. Apply requires both reviewed digests, an allowlisted actor, approval reason, source and generation identities, target environment, unchanged Azure/backend state, consistent action summary, and confirmation phrase. It records a sanitized GitHub apply-result artifact before relying on project-local evidence. This is deliberate manual authorization, but it does not claim independent separation of duties when one person is the only operator.
 
 ## Documentation changelog
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 0.5.0 | 2026-08-07 | 2026-08-12 | Ray Swan / Codex | Bound apply to platform provenance, artifact age, Azure context, unchanged backend state, dual reviewed digests, allowlisted actor, approval reason, and durable result evidence. |
 | 0.4.0 | 2026-08-07 | 2026-08-12 | Ray Swan / Codex | Required the schema 1.0 six-file saved-plan artifact and apply-side provenance, backend, digest, and action verification. |
 | 0.3.0 | 2026-08-07 | 2026-08-12 | Ray Swan / Codex | Defined digest-bound manual plan/apply authorization without replanning or an unsupported independent-reviewer claim. |
 | 1.0.0-rc1 | 2026-08-07 | 2026-08-11 | Ray Swan / Codex | Replaced the legacy Bicep/Databricks sequence with the R1 Terraform Azure ML batch acceptance sequence. |

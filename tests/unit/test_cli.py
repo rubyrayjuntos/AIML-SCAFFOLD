@@ -111,6 +111,34 @@ def test_output_file_returns_stable_path_error(
     assert payload["error"]["code"] == "PATH_TYPE_INVALID"
 
 
+def test_generate_records_explicit_platform_provenance(
+    tmp_path: Path, manifest_payload: dict, capsys
+) -> None:
+    manifest = tmp_path / "manifest.yaml"
+    output = tmp_path / "output"
+    _write_manifest(manifest, manifest_payload)
+    assert (
+        cli.main(
+            [
+                "generate",
+                str(manifest),
+                "--output",
+                str(output),
+                "--allow-experimental",
+                "--platform-source-commit",
+                "a" * 40,
+                "--platform-package-digest",
+                "sha256:" + "b" * 64,
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    receipt = json.loads((output / "generation-receipt.json").read_text())
+    assert receipt["platform_source_commit"] == "a" * 40
+    assert receipt["platform_package_digest"] == "sha256:" + "b" * 64
+
+
 def test_missing_template_content_returns_stable_json(
     tmp_path: Path, manifest_payload: dict, capsys, monkeypatch
 ) -> None:
