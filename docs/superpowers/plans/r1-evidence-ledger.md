@@ -24,7 +24,7 @@ This ledger is updated as implementation gates are completed. It must distinguis
 | `sha256:fbcc524f7a2cd2b108dcc6e87d1dc88d802597a4e2b9bb53adf643c0958dc813` | `invalidated_before_publication` | Built from a dirty local build directory that contributed a stale deleted template; never pushed | `false` |
 | `sha256:857b86e6b8566765d3b780549a52100092fc3479d679ac961d5c22c73a835bc6` | `published_oidc_blocked` | Product commit `915ca008f851645de116993d56cacab0487b6212` passed CI; private-repository branch protection requires GitHub Pro or public visibility | GitHub source only; no Azure workload |
 | `sha256:e662bc826b5125aaef3563cdc7b73e7e9126d392664aa2cba4964ed38e72116e` | `invalidated_after_negative_oidc_proof` | Run `31620247861` proved GitHub emits the ID-qualified subject; Azure login failed before token issuance | GitHub workflow only; no Azure workload |
-| `sha256:cc099e528c371fb448550f37103b024d8b107203c7878a66a371163e86bb47ea` | `oidc_read_only_proven` | Product PR `#2`, protected merge `6532d6605fc497555d26eaeface997e5ac6556d9`, CI `31621790883`, and OIDC proof `31621923439` passed | OIDC token plus authorized/denied reads only; no Terraform or Azure ML workload mutation |
+| `sha256:cc099e528c371fb448550f37103b024d8b107203c7878a66a371163e86bb47ea` | `oidc_read_only_proven_plan_invalidated` | OIDC proof `31621923439` passed; plan run `31623045228` then stopped at init because the workflow omitted AzureRM's OIDC environment contract | OIDC token plus authorized/denied reads only; no plan artifact or Azure ML workload mutation |
 
 This entry is immutable history and must not be overwritten by the replacement candidate. Read-only discovery subsequently confirmed the intended tenant/subscription and found a same-subscription backend candidate, but no suitable least-privilege R1 GitHub OIDC identity.
 
@@ -34,6 +34,7 @@ For historical traceability, generation `857b...35bc6` used wheel digest `sha256
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.1.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded safe workload-plan initialization failure `31623045228` and the generated AzureRM OIDC environment-contract correction. |
 | 1.0.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded deterministic cross-installer regeneration, protected publication of generation `cc099e52...bb47ea`, and successful nonmutating GitHub OIDC proof. |
 | 0.9.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded platform PR, generated product commit, successful CI, and the GitHub-plan branch-protection blocker that stopped OIDC execution. |
 | 0.8.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded immutable platform commit, reproducible clean wheel, invalidated dirty-build candidate, and eligible replacement generation. |

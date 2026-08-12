@@ -123,6 +123,12 @@ def test_generated_workflows_enforce_digest_bound_manual_apply(
     assert "workflow_dispatch:" in smoke
     assert "az account get-access-token" in smoke
     assert "terraform apply" not in smoke
+    for workflow in (plan, apply):
+        assert 'ARM_USE_OIDC: "true"' in workflow
+        assert 'ARM_USE_AZUREAD: "true"' in workflow
+        assert "ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}" in workflow
+        assert "ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}" in workflow
+        assert "ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}" in workflow
     for workflow in (plan, apply, smoke):
         assert "pip install -c constraints.txt pyyaml" in workflow
         assert "pyyaml==6.0.3" not in workflow

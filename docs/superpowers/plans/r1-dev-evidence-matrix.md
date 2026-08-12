@@ -68,6 +68,8 @@ No Test or Prod claim may inherit evidence from this Dev matrix.
 | OIDC proof | Run `31621923439` passed token identity, Dev-resource-group read, backend-container data read, and expected out-of-scope management denial |
 | Mutation boundary | Terraform workload state/write/lock, plan/apply, and Azure ML lifecycle were not exercised |
 
+The first workload-plan attempt, GitHub Actions run `31623045228`, verified generation provenance and completed OIDC login but stopped during `terraform init`. Terraform attempted its Azure CLI user authentication path because the generated workflow did not set the AzureRM OIDC environment contract. No plan or artifact was produced and no workload resource was mutated. Generation `cc099e52...bb47ea` is therefore invalidated for workload planning; the platform template must be corrected and deterministically regenerated before retry.
+
 ## Replacement publication candidate: 2026-08-12
 
 | Evidence | Sanitized result |
@@ -185,6 +187,7 @@ No backend reuse, identity reuse, federated credential change, role assignment, 
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.6.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded the safe pre-plan initialization failure in run `31623045228` and invalidated generation `cc099e52...bb47ea` for workload planning pending an OIDC environment-contract correction. |
 | 1.5.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded replacement generation `cc099e52...bb47ea`, protected PR publication, passing main CI, and successful nonmutating OIDC proof. |
 | 1.4.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Invalidated generation `e662...2116e`, recorded its safe OIDC subject-mismatch proof, and captured the approved identity-only correction with a clean post-apply plan. |
 | 1.3.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded generated source publication, passing GitHub CI, failed private branch-protection attempt, and deliberate stop before OIDC. |

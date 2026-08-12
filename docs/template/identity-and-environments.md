@@ -27,6 +27,8 @@ The workflow uses `azure/login@v2` with:
 
 These are identifiers, not secrets. The workflow receives a short-lived token through OIDC; no client secret is stored in GitHub.
 
+Terraform plan and apply workflows also set `ARM_USE_OIDC=true`, `ARM_USE_AZUREAD=true`, and the corresponding `ARM_CLIENT_ID`, `ARM_TENANT_ID`, and `ARM_SUBSCRIPTION_ID` values. This binds both the AzureRM backend and provider to workload-identity federation instead of the Azure CLI user authentication path.
+
 Recommended GitHub Environment names are `dev`, `test`, and `prod`. Production should require environment approval before deployment and model promotion.
 
 Protected-branch policy controls eligible deployment refs; it is not an independent human approval. If native required reviewers are unavailable, use the ADR 0008 digest-bound manual dispatch contract and report independent reviewer separation as unavailable when only one human operates the repository.
@@ -64,6 +66,7 @@ They are intentionally declarative and safe to review. Secrets and subscription-
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 0.5.0 | 2026-08-07 | 2026-08-12 | Ray Swan / Codex | Documented the AzureRM OIDC environment contract required after `azure/login` for Terraform backend and provider authentication. |
 | 0.4.0 | 2026-08-07 | 2026-08-12 | Ray Swan / Codex | Distinguished protected branches from manual approval and referenced the digest-bound fallback contract. |
 | 1.0.0-rc1 | 2026-08-07 | 2026-08-11 | Ray Swan / Codex | Aligned identity, Key Vault, environment profiles, and setup with the R1 Terraform factory. |
 | 0.1.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Initial reusable identity, Key Vault, and environment-profile guidance. |
