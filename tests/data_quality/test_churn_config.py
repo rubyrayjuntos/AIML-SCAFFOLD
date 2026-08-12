@@ -22,4 +22,6 @@ def test_endpoint_and_promotion_policy_are_canonical() -> None:
     assert manifest["serving"]["endpoint"] == "churn-model-endpoint"
     assert config["model"]["primary_metric"] == "auc"
     assert config["model"]["minimum_improvement"] == 0.02
-    assert Settings().model_serving_endpoint == "churn-model-endpoint"
+    assert Settings.from_scenario(Path("src/scenarios/churn")).model_serving_endpoint == (
+        "churn-model-endpoint"
+    )

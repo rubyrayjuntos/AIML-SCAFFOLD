@@ -29,23 +29,23 @@ These are identifiers, not secrets. The workflow receives a short-lived token th
 
 Recommended GitHub Environment names are `dev`, `test`, and `prod`. Production should require environment approval before deployment and model promotion.
 
+Protected-branch policy controls eligible deployment refs; it is not an independent human approval. If native required reviewers are unavailable, use the ADR 0008 digest-bound manual dispatch contract and report independent reviewer separation as unavailable when only one human operates the repository.
+
 ## Key Vault
 
-The Bicep deployment creates or consumes an RBAC-enabled Key Vault. Runtime managed identities receive only the required secret-read role. CI identities receive deployment permissions but should not automatically receive application data access.
+Generated R1 Terraform creates an RBAC-enabled project Key Vault inside the assigned environment resource group. Runtime managed identities receive only required access. The deployment identity receives scoped infrastructure permissions and only the evidence-container data role required by generated workflows.
 
 Store values such as Databricks OAuth credentials, Foundry configuration secrets, and application connection details in Key Vault. Reference them from Container Apps or deployment configuration through secret references. Never put values in `.env`, YAML profiles, workspace files, or GitHub logs.
 
 ## Environment profiles
 
-Profiles under `config/environments/` contain non-secret environment identity:
+Generated profiles under `config/` contain non-secret environment identity:
 
 - resource group;
 - location;
-- catalog;
 - network posture;
 - Key Vault name;
-- Databricks target;
-- Foundry project name.
+- Azure ML workspace and evidence configuration.
 
 They are intentionally declarative and safe to review. Secrets and subscription-specific deployment credentials are supplied by the local shell or GitHub Environment.
 
@@ -55,12 +55,15 @@ They are intentionally declarative and safe to review. Secrets and subscription-
 2. Load the corresponding non-secret profile.
 3. Authenticate locally with `az login` or in CI with OIDC.
 4. Run `scripts/validate-azure-context.sh`.
-5. Run Bicep `what-if`.
-6. Deploy infrastructure only after review/approval.
-7. Deploy the Databricks Bundle and scenario workflow.
+5. Run `aiml-scaffold doctor` for read-only prerequisite checks.
+6. Run and review the generated Terraform plan.
+7. Apply Dev infrastructure only after separate approval.
+8. Run the generated Azure ML batch lifecycle workflows.
 
 ## Documentation changelog
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 0.4.0 | 2026-08-07 | 2026-08-12 | Ray Swan / Codex | Distinguished protected branches from manual approval and referenced the digest-bound fallback contract. |
+| 1.0.0-rc1 | 2026-08-07 | 2026-08-11 | Ray Swan / Codex | Aligned identity, Key Vault, environment profiles, and setup with the R1 Terraform factory. |
 | 0.1.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Initial reusable identity, Key Vault, and environment-profile guidance. |

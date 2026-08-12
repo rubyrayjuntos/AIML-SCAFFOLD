@@ -6,18 +6,19 @@ GitHub Actions uses Entra federated credentials and OIDC. Runtime services use m
 
 ## Resource boundaries
 
-The template distinguishes shared enterprise resources from project-owned resources. Project identities receive only the roles required for their environment and scenario.
+The template distinguishes administrator-provided bootstrap resources from Terraform-owned project resources. Project identities receive only environment-resource-group permissions and the data-plane role required for the private evidence container. Subscription-level Owner is prohibited.
 
 ## Network profiles
 
-Production uses private connectivity, private endpoints, private DNS, and disabled public access where supported. Development may use public endpoints only through an explicit lower-cost profile documented as a tradeoff.
+R1 live acceptance is Dev-only. The resolved plan and documentation must expose any public-network or always-on-resource tradeoff. Production private-network conformance is deferred and must not inherit a Dev evidence claim.
 
 ## Data and agent controls
 
-Foundry tools are allowlisted, read-only application functions. Agents cannot issue arbitrary SQL, access unapproved tables, or mutate data. Logs must exclude secrets and access tokens.
+Foundry is outside R1. Generated evidence rejects sensitive metadata keys recursively and permits only identifiers, metrics, hashes, and immutable artifact references. Credentials, tokens, raw training data, prompts, and sensitive inference payloads are prohibited.
 
 ## Documentation changelog
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.0.0-rc1 | 2026-08-07 | 2026-08-11 | Ray Swan / Codex | Added R1 scoped identity, Dev network boundary, and evidence redaction controls. |
 | 0.1.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Initial template security policy. |

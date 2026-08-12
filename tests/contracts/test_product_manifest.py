@@ -1,320 +1,221 @@
-import json
+from __future__ import annotations
+
 from pathlib import Path
 
 import pytest
 import yaml
 from pydantic import ValidationError
 
-from platform_core.contracts.product_manifest import (
-    AgentYaml,
-    ConfigYaml,
-    ProductIdentity,
-    ProductManifest,
-    RoutingEntry,
-    ScenarioEvaluation,
-    ScenarioFeatures,
-    ScenarioModel,
-    ScenarioPromotionPolicy,
-    ScenarioRetrieval,
-    ScenarioServing,
-    ScenarioYaml,
-    SecurityPosture,
-    ToolsContract,
-    VectorIndex,
-    discover_scenario_dir,
-    discover_single_file,
-    discover_single_subdir,
-)
+from platform_core.contracts.product_manifest import ProductManifest
+from platform_core.policy.evaluator import evaluate_policy
 
 
-def test_product_identity_requires_all_fields() -> None:
-    identity = ProductIdentity(name="widgets", display_name="Widgets", manifest_version="1.0")
-    assert identity.manifest_version == "1.0"
-    with pytest.raises(ValidationError):
-        ProductIdentity(name="widgets", display_name="Widgets")
+def test_ml_only_manifest_does_not_require_foundry(manifest_payload: dict) -> None:
+    manifest = ProductManifest.model_validate(manifest_payload)
+    assert manifest.capabilities.ml is not None
+    assert manifest.agent is None
+    assert manifest.tools is None
+    descriptors = evaluate_policy(manifest, allow_experimental=True)
+    assert {descriptor.capability for descriptor in descriptors} == {
+        "infrastructure",
+        "ml",
+        "registry",
+        "serving",
+        "evidence",
+    }
 
 
-def test_security_posture_rejects_unknown_access_mode() -> None:
-    with pytest.raises(ValidationError):
-        SecurityPosture(agent_data_access="raw")
+def test_manifest_loads_from_yaml(tmp_path: Path, manifest_payload: dict) -> None:
+    path = tmp_path / "manifest.yaml"
+    path.write_text(yaml.safe_dump(manifest_payload), encoding="utf-8")
+    assert ProductManifest.load(path).product.name == "example-risk"
 
 
-def test_vector_index_requires_at_least_one_consumer() -> None:
-    with pytest.raises(ValidationError):
-        VectorIndex(name="notes_vs", source_table="gold.notes", used_by=[])
+@pytest.mark.parametrize("field", ["manifest_schema_version", "platform_version"])
+def test_unsupported_versions_fail(field: str, manifest_payload: dict) -> None:
+    manifest_payload[field] = "999"
+    with pytest.raises(ValidationError, match=field):
+        ProductManifest.model_validate(manifest_payload)
 
 
-def test_scenario_yaml_parses_a_complete_synthetic_scenario() -> None:
-    scenario = ScenarioYaml(
-        name="widgets",
-        task="classification",
-        source_datasets=["orders"],
-        features=ScenarioFeatures(
-            builder="widgets_feature_builder",
-            schema="widgets_feature_schema_v1",
-            version="widgets.features.v1",
-            contract="widgets_feature_contract_v1",
-        ),
-        model=ScenarioModel(
-            name="widgets_classifier",
-            candidate_models=["logistic_regression"],
-            minimum_rows=100,
-        ),
-        evaluation=ScenarioEvaluation(metrics=["auc"]),
-        promotion_policy=ScenarioPromotionPolicy(metric="auc", threshold=0.01),
-        serving=ScenarioServing(endpoint="widgets-model-endpoint"),
-        retrieval=ScenarioRetrieval(
-            vector_indexes=[
-                VectorIndex(name="notes_vs", source_table="gold.notes", used_by=["retrieve_notes"])
-            ]
-        ),
+def test_invalid_backend_reference_fails(manifest_payload: dict) -> None:
+    manifest_payload["shared_resources"]["terraform_backend"]["storage_account_id"] = "name"
+    with pytest.raises(ValidationError, match="storage account ARM ID"):
+        ProductManifest.model_validate(manifest_payload)
+
+
+@pytest.mark.parametrize("field", ["tenant_id", "subscription_id"])
+def test_invalid_azure_context_uuid_fails(field: str, manifest_payload: dict) -> None:
+    manifest_payload["shared_resources"]["azure_context"][field] = "not-a-uuid"
+    with pytest.raises(ValidationError, match=field):
+        ProductManifest.model_validate(manifest_payload)
+
+
+def test_backend_subscription_must_be_a_uuid(manifest_payload: dict) -> None:
+    backend = manifest_payload["shared_resources"]["terraform_backend"]
+    backend["resource_group_id"] = "/subscriptions/not-a-uuid/resourceGroups/state"
+    backend["storage_account_id"] = (
+        "/subscriptions/not-a-uuid/resourceGroups/state/providers/"
+        "Microsoft.Storage/storageAccounts/state"
     )
-    assert scenario.model.minimum_rows == 100
+    with pytest.raises(ValidationError, match="UUID subscription IDs"):
+        ProductManifest.model_validate(manifest_payload)
 
 
-def test_scenario_retrieval_defaults_to_no_indexes() -> None:
-    assert ScenarioRetrieval().vector_indexes == []
-
-
-def test_config_yaml_requires_catalog_keys_to_be_known_environments() -> None:
-    valid = dict(
-        scenario="widgets",
-        source_dataset="widgets_v1",
-        source_url="https://example.com/widgets.csv",
-        expected_customer_count=100,
-        schemas=["bronze", "silver", "gold"],
-        playbooks_table="gold.recommended_actions",
+def test_cross_subscription_backend_requires_explicit_policy(
+    manifest_payload: dict,
+) -> None:
+    manifest_payload["shared_resources"]["azure_context"]["subscription_id"] = (
+        "00000000-0000-0000-0000-000000000002"
     )
-    config = ConfigYaml(catalogs={"dev": "widgets_dev", "prod": "widgets_prod"}, **valid)
-    assert config.catalogs["prod"] == "widgets_prod"
-    with pytest.raises(ValidationError):
-        ConfigYaml(catalogs={"staging": "widgets_staging"}, **valid)
+    with pytest.raises(ValidationError, match="allow_cross_subscription_backend"):
+        ProductManifest.model_validate(manifest_payload)
 
 
-def test_routing_entry_defaults_fallback_to_empty_list() -> None:
-    routing = RoutingEntry(primary="gpt-4o-mini")
-    assert routing.fallback == []
-
-
-def test_tools_contract_requires_at_least_one_tool() -> None:
-    with pytest.raises(ValidationError):
-        ToolsContract(tools=[])
-
-
-def test_agent_yaml_parses_guardrails() -> None:
-    agent = AgentYaml(
-        name="widgets-grounded-agent",
-        description="Explain a widgets score",
-        tools=["get_widget_score"],
-        output_schema="foundry/agents/assistant_response.schema.json",
-        guardrails={"require_citations": True},
+def test_cross_subscription_backend_can_be_explicitly_allowed(
+    manifest_payload: dict,
+) -> None:
+    manifest_payload["shared_resources"]["azure_context"]["subscription_id"] = (
+        "00000000-0000-0000-0000-000000000002"
     )
-    assert agent.guardrails["require_citations"] is True
+    manifest_payload["policy"]["allow_cross_subscription_backend"] = True
+    manifest = ProductManifest.model_validate(manifest_payload)
+    assert manifest.policy.allow_cross_subscription_backend is True
 
 
-def test_discover_single_subdir_requires_exactly_one(tmp_path: Path) -> None:
-    (tmp_path / "only").mkdir()
-    assert discover_single_subdir(tmp_path).name == "only"
-
-    (tmp_path / "second").mkdir()
-    with pytest.raises(ValueError, match="expected exactly one subdirectory"):
-        discover_single_subdir(tmp_path)
-
-
-def test_discover_single_file_requires_exactly_one(tmp_path: Path) -> None:
-    (tmp_path / "agent.yaml").write_text("name: x")
-    assert discover_single_file(tmp_path, "*.yaml").name == "agent.yaml"
-
-    (tmp_path / "other.yaml").write_text("name: y")
-    with pytest.raises(ValueError, match="expected exactly one file"):
-        discover_single_file(tmp_path, "*.yaml")
-
-
-def _write_synthetic_manifest(tmp_path: Path) -> tuple[Path, Path]:
-    scenario_dir = tmp_path / "src" / "scenarios" / "widgets"
-    scenario_dir.mkdir(parents=True)
-    foundry_dir = tmp_path / "foundry"
-    (foundry_dir / "agents").mkdir(parents=True)
-    (foundry_dir / "tools").mkdir(parents=True)
-
-    (scenario_dir / "product.yaml").write_text(
-        yaml.dump(
-            {
-                "product": {
-                    "name": "widgets",
-                    "display_name": "Widgets",
-                    "manifest_version": "1.0",
-                },
-                "environments": ["dev", "prod"],
-                "security": {
-                    "dev": {"agent_data_access": "mediated"},
-                    "prod": {"agent_data_access": "mediated"},
-                },
-            }
-        )
+def test_backend_resource_ids_must_share_subscription(manifest_payload: dict) -> None:
+    manifest_payload["shared_resources"]["terraform_backend"]["resource_group_id"] = (
+        "/subscriptions/00000000-0000-0000-0000-000000000002/"
+        "resourceGroups/rg-platform-state"
     )
-    (scenario_dir / "scenario.yaml").write_text(
-        yaml.dump(
-            {
-                "name": "widgets",
-                "task": "classification",
-                "source_datasets": ["orders"],
-                "features": {
-                    "builder": "widgets_feature_builder",
-                    "schema": "widgets_feature_schema_v1",
-                    "version": "widgets.features.v1",
-                    "contract": "widgets_feature_contract_v1",
-                },
-                "model": {
-                    "name": "widgets_classifier",
-                    "candidate_models": ["logistic_regression"],
-                    "minimum_rows": 100,
-                },
-                "evaluation": {"metrics": ["auc"]},
-                "promotion_policy": {"metric": "auc", "threshold": 0.01},
-                "serving": {"endpoint": "widgets-model-endpoint"},
-                "retrieval": {
-                    "vector_indexes": [
-                        {
-                            "name": "notes_vs",
-                            "source_table": "gold.notes",
-                            "used_by": ["retrieve_notes"],
-                        }
-                    ]
-                },
-            }
-        )
-    )
-    (scenario_dir / "config.yaml").write_text(
-        yaml.dump(
-            {
-                "scenario": "widgets",
-                "source_dataset": "widgets_v1",
-                "source_url": "https://example.com/widgets.csv",
-                "expected_customer_count": 100,
-                "catalogs": {"dev": "widgets_dev", "prod": "widgets_prod"},
-                "schemas": ["bronze", "silver", "gold"],
-                "playbooks_table": "gold.recommended_actions",
-            }
-        )
-    )
-    (scenario_dir / "routing.yaml").write_text(
-        yaml.dump(
-            {
-                "dev": {"primary": "gpt-4o-mini", "fallback": []},
-                "prod": {"primary": "gpt-4o", "fallback": ["gpt-4o-mini"]},
-            }
-        )
-    )
-    (foundry_dir / "agents" / "widgets-grounded-agent.yaml").write_text(
-        yaml.dump(
-            {
-                "name": "widgets-grounded-agent",
-                "description": "Explain a widgets score",
-                "tools": ["retrieve_notes"],
-                "output_schema": "foundry/agents/assistant_response.schema.json",
-                "guardrails": {"require_citations": True},
-            }
-        )
-    )
-    (foundry_dir / "tools" / "tools.contract.json").write_text(
-        json.dumps(
-            {
-                "tools": [
-                    {
-                        "name": "retrieve_notes",
-                        "mutates_data": False,
-                        "authorization": "read-approved-gold-context",
-                    }
-                ]
-            }
-        )
-    )
-    return scenario_dir, foundry_dir
+    manifest_payload["policy"]["allow_cross_subscription_backend"] = True
+    with pytest.raises(ValidationError, match="resource IDs must use the same subscription"):
+        ProductManifest.model_validate(manifest_payload)
 
 
-def test_product_manifest_loads_a_valid_synthetic_product(tmp_path: Path) -> None:
-    scenario_dir, foundry_dir = _write_synthetic_manifest(tmp_path)
-
-    manifest = ProductManifest.load(scenario_dir, foundry_dir=foundry_dir)
-
-    assert manifest.product.name == "widgets"
-    assert manifest.routing["prod"].primary == "gpt-4o"
-    assert manifest.scenario.model.minimum_rows == 100
+def test_missing_ml_provider_fails(manifest_payload: dict) -> None:
+    manifest_payload["capabilities"]["ml"].pop("provider")
+    with pytest.raises(ValidationError, match="provider"):
+        ProductManifest.model_validate(manifest_payload)
 
 
-def test_product_manifest_rejects_unsupported_version(tmp_path: Path) -> None:
-    scenario_dir, foundry_dir = _write_synthetic_manifest(tmp_path)
-    product_yaml = scenario_dir / "product.yaml"
-    data = yaml.safe_load(product_yaml.read_text())
-    data["product"]["manifest_version"] = "2.0"
-    product_yaml.write_text(yaml.dump(data))
-
-    with pytest.raises(ValidationError, match="manifest_version"):
-        ProductManifest.load(scenario_dir, foundry_dir=foundry_dir)
+def test_agent_without_runtime_definition_fails(manifest_payload: dict) -> None:
+    manifest_payload["capabilities"]["agent"] = {
+        "provider": "foundry",
+        "features": ["prompt_agent"],
+    }
+    with pytest.raises(ValidationError, match="agent definition"):
+        ProductManifest.model_validate(manifest_payload)
 
 
-def test_product_manifest_requires_security_for_every_declared_environment(tmp_path: Path) -> None:
-    scenario_dir, foundry_dir = _write_synthetic_manifest(tmp_path)
-    product_yaml = scenario_dir / "product.yaml"
-    data = yaml.safe_load(product_yaml.read_text())
-    del data["security"]["prod"]
-    product_yaml.write_text(yaml.dump(data))
-
-    with pytest.raises(ValidationError, match="security"):
-        ProductManifest.load(scenario_dir, foundry_dir=foundry_dir)
+def test_retrieval_without_provider_fails(manifest_payload: dict) -> None:
+    manifest_payload["capabilities"]["retrieval"] = {"features": ["vector_index"]}
+    with pytest.raises(ValidationError, match="provider"):
+        ProductManifest.model_validate(manifest_payload)
 
 
-def test_product_manifest_rejects_direct_agent_data_access_in_prod(tmp_path: Path) -> None:
-    scenario_dir, foundry_dir = _write_synthetic_manifest(tmp_path)
-    product_yaml = scenario_dir / "product.yaml"
-    data = yaml.safe_load(product_yaml.read_text())
-    data["security"]["prod"]["agent_data_access"] = "direct"
-    product_yaml.write_text(yaml.dump(data))
-
-    with pytest.raises(ValidationError, match="agent_data_access"):
-        ProductManifest.load(scenario_dir, foundry_dir=foundry_dir)
+def test_retraining_without_dataset_resolution_is_rejected(manifest_payload: dict) -> None:
+    manifest_payload["capabilities"]["ml"]["features"].append("retraining")
+    manifest = ProductManifest.model_validate(manifest_payload)
+    with pytest.raises(ValueError, match="unsupported R1 ML feature 'retraining'"):
+        evaluate_policy(manifest, allow_experimental=True)
 
 
-def test_product_manifest_allows_direct_agent_data_access_in_dev(tmp_path: Path) -> None:
-    scenario_dir, foundry_dir = _write_synthetic_manifest(tmp_path)
-    product_yaml = scenario_dir / "product.yaml"
-    data = yaml.safe_load(product_yaml.read_text())
-    data["security"]["dev"]["agent_data_access"] = "direct"
-    product_yaml.write_text(yaml.dump(data))
-
-    manifest = ProductManifest.load(scenario_dir, foundry_dir=foundry_dir)
-    assert manifest.security["dev"].agent_data_access == "direct"
+@pytest.mark.parametrize("retention", [0, 3651])
+def test_invalid_evidence_retention_fails(retention: int, manifest_payload: dict) -> None:
+    manifest_payload["policy"]["evidence_retention_days"] = retention
+    with pytest.raises(ValidationError, match="evidence_retention_days"):
+        ProductManifest.model_validate(manifest_payload)
 
 
-def test_product_manifest_rejects_orphaned_vector_index(tmp_path: Path) -> None:
-    scenario_dir, foundry_dir = _write_synthetic_manifest(tmp_path)
-    scenario_yaml = scenario_dir / "scenario.yaml"
-    data = yaml.safe_load(scenario_yaml.read_text())
-    data["retrieval"]["vector_indexes"][0]["used_by"] = ["unknown_tool"]
-    scenario_yaml.write_text(yaml.dump(data))
+def test_invalid_region_fails_during_resolution(manifest_payload: dict) -> None:
+    manifest_payload["provider_extensions"]["azure_ml"]["location"] = "westus"
+    manifest = ProductManifest.model_validate(manifest_payload)
+    from platform_core.contracts.resolver import resolve_project_plan
 
-    with pytest.raises(ValidationError, match="unknown tool"):
-        ProductManifest.load(scenario_dir, foundry_dir=foundry_dir)
+    with pytest.raises(ValueError, match="not allowed"):
+        resolve_project_plan(manifest, "dev", allow_experimental=True)
 
 
-def test_product_manifest_rejects_retrieval_tool_with_no_backing_index(tmp_path: Path) -> None:
-    scenario_dir, foundry_dir = _write_synthetic_manifest(tmp_path)
-    tools_path = foundry_dir / "tools" / "tools.contract.json"
-    data = json.loads(tools_path.read_text())
-    data["tools"].append(
-        {
-            "name": "retrieve_manuals",
-            "mutates_data": False,
-            "authorization": "read-approved-gold-manuals",
-        }
-    )
-    tools_path.write_text(json.dumps(data))
-
-    with pytest.raises(ValidationError, match="not referenced by any vector index"):
-        ProductManifest.load(scenario_dir, foundry_dir=foundry_dir)
+@pytest.mark.parametrize("value", [0, 101, True, "four"])
+def test_invalid_batch_compute_limit_fails(value: object, manifest_payload: dict) -> None:
+    manifest_payload["provider_extensions"]["azure_ml"][
+        "batch_compute_max_instances"
+    ] = value
+    with pytest.raises(ValidationError, match="batch_compute_max_instances"):
+        ProductManifest.model_validate(manifest_payload)
 
 
-def test_discover_scenario_dir_finds_the_single_scenario(tmp_path: Path) -> None:
-    scenario_dir, _ = _write_synthetic_manifest(tmp_path)
-    assert discover_scenario_dir(scenario_dir.parent) == scenario_dir
+def test_unknown_azure_ml_extension_key_fails(manifest_payload: dict) -> None:
+    manifest_payload["provider_extensions"]["azure_ml"]["compute_sze"] = "typo"
+    with pytest.raises(ValidationError, match="compute_sze"):
+        ProductManifest.model_validate(manifest_payload)
+
+
+def test_azure_ml_extensions_are_normalized(manifest_payload: dict) -> None:
+    manifest_payload["provider_extensions"]["azure_ml"]["location"] = " EASTUS "
+    manifest_payload["provider_extensions"]["azure_ml"]["compute_size"] = " Standard_D4s_v5 "
+    manifest = ProductManifest.model_validate(manifest_payload)
+    assert manifest.provider_extensions.azure_ml.location == "eastus"
+    assert manifest.provider_extensions.azure_ml.compute_size == "Standard_D4s_v5"
+
+
+def test_stable_only_rejects_preview_provider(manifest_payload: dict) -> None:
+    manifest_payload["policy"]["capability_maturity"] = "stable_only"
+    manifest = ProductManifest.model_validate(manifest_payload)
+    with pytest.raises(ValueError, match="exceeds policy"):
+        evaluate_policy(manifest, allow_experimental=True)
+
+
+def test_preview_requires_explicit_cli_opt_in(manifest_payload: dict) -> None:
+    manifest = ProductManifest.model_validate(manifest_payload)
+    with pytest.raises(ValueError, match="--allow-experimental"):
+        evaluate_policy(manifest)
+
+
+def test_planned_agent_provider_is_unavailable(manifest_payload: dict) -> None:
+    manifest_payload["capabilities"]["agent"] = {
+        "provider": "foundry",
+        "features": ["prompt_agent"],
+    }
+    manifest_payload["agent"] = {
+        "name": "helper",
+        "description": "A helper",
+        "tools": ["lookup"],
+        "output_schema": "schema.json",
+        "guardrails": {"require_citations": True},
+    }
+    manifest = ProductManifest.model_validate(manifest_payload)
+    with pytest.raises(ValueError, match="planned and unavailable"):
+        evaluate_policy(manifest, allow_experimental=True)
+
+
+def test_retrieval_without_scenario_fails(manifest_payload: dict) -> None:
+    manifest_payload["capabilities"]["retrieval"] = {
+        "provider": "azure_ai_search",
+        "features": ["vector_index"],
+    }
+    with pytest.raises(ValidationError, match="scenario retrieval"):
+        ProductManifest.model_validate(manifest_payload)
+
+
+def test_bicep_is_not_an_r1_provider(manifest_payload: dict) -> None:
+    manifest_payload["infrastructure"]["azure"]["provider"] = "bicep"
+    manifest = ProductManifest.model_validate(manifest_payload)
+    with pytest.raises(ValueError, match="Terraform is the only"):
+        evaluate_policy(manifest, allow_experimental=True)
+
+
+def test_duplicate_features_fail(manifest_payload: dict) -> None:
+    manifest_payload["capabilities"]["ml"]["features"].append("training")
+    with pytest.raises(ValidationError, match="unique"):
+        ProductManifest.model_validate(manifest_payload)
+
+
+def test_platform_core_contains_no_reference_scenario_names() -> None:
+    root = Path("src/platform_core")
+    forbidden = ("churn", "taxi", "telco")
+    for path in root.rglob("*.py"):
+        source = path.read_text(encoding="utf-8").lower()
+        for token in forbidden:
+            assert token not in source, f"{token!r} leaked into {path}"

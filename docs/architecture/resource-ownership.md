@@ -2,21 +2,22 @@
 
 | Resource area | Project template owns | Enterprise platform owns |
 |---|---|---|
-| Scenario tables and features | Yes | No |
-| Model versions and aliases | Yes | No |
-| Project serving endpoint | Yes | No |
-| Project Container App | Yes | No |
-| Project Key Vault secrets | Usually | Policy/guardrails |
-| Unity Catalog metastore | No | Yes |
-| Hub networking | No | Yes |
+| Environment resource group | No | Provisioning and scoped grants |
+| Terraform backend | No | State account, container, and access |
+| Azure ML workspace | Yes, within assigned group | Policy/guardrails |
+| Project storage and evidence container | Yes | Retention and classification policy |
+| Model versions | Yes | No |
+| Project batch endpoint | Yes | No |
+| Project Key Vault | Yes | Policy/guardrails |
+| OIDC federated credential | No | Provisioning and governance |
 | Entra tenant and governance | No | Yes |
-| GitHub OIDC application | Project integration | Enterprise governance |
-| Central monitoring platform | Consumes | Yes |
+| Central portfolio evidence index | No in R1 | Deferred |
 
-The template must accept IDs for centrally owned resources and must not recreate or mutate those resources unexpectedly.
+The manifest references centrally owned resources by immutable Azure resource ID. Generated Terraform operates only inside its assigned environment resource group. Existing Bicep must not target that group or co-manage any generated resource.
 
 ## Documentation changelog
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.0.0-rc1 | 2026-08-07 | 2026-08-11 | Ray Swan / Codex | Recorded R1 bootstrap, Terraform, Azure ML, identity, and evidence ownership. |
 | 0.1.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Initial shared-versus-project ownership model. |

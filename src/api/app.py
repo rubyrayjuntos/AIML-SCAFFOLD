@@ -14,11 +14,11 @@ from platform_core.contracts.models import (
     ScoreResponse,
     SnapshotDelta,
 )
-from platform_core.integrations.databricks_serving import (
+from platform_core.settings.config import settings
+from scenarios.churn.databricks_serving import (
     DatabricksServingAdapter,
     ServingAdapterUnavailable,
 )
-from platform_core.settings.config import settings
 
 app = FastAPI(title="Enterprise ML Workflow API", version="1.0.0")
 API_CONTRACT_VERSION = "2026-08-07"
