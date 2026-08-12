@@ -152,6 +152,7 @@ def test_wheel_package_data_includes_hidden_deployment_plan_template() -> None:
     assert "templates/**/*" not in package_data
     assert "templates/azure_ml_batch/.azure/*" in package_data
     assert "templates/azure_ml_batch/scripts/*.py" in package_data
+    assert "templates/azure_ml_batch/scripts/*.py.j2" in package_data
     excluded = setuptools["exclude-package-data"]["aiml_scaffold"]
     assert "templates/azure_ml_batch/scripts/__pycache__/*" in excluded
     assert "templates/**/__pycache__/*" in excluded
@@ -400,11 +401,37 @@ def test_generated_receipt_remains_valid_after_git_metadata_is_created(
         ProductManifest.model_validate(manifest_payload),
         output,
         allow_experimental=True,
+        platform_source_commit="a" * 40,
+        platform_package_digest="sha256:" + "b" * 64,
     )
     git_metadata = output / ".git"
     git_metadata.mkdir()
     (git_metadata / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
     assert verify_generation(output)["generation_id"] == receipt["generation_id"]
+
+
+def test_generated_receipt_ignores_standard_build_metadata(
+    tmp_path: Path, manifest_payload: dict
+) -> None:
+    output = tmp_path / "project"
+    _, receipt = generate_project(
+        ProductManifest.model_validate(manifest_payload),
+        output,
+        allow_experimental=True,
+        platform_source_commit="a" * 40,
+        platform_package_digest="sha256:" + "b" * 64,
+    )
+    runtime_files = {
+        output / "azure_ai_ml_ops.egg-info/PKG-INFO": "metadata\n",
+        output / "build/lib/runtime.py": "runtime = True\n",
+        output / "dist/package.whl": "runtime wheel\n",
+    }
+    for path, content in runtime_files.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8", newline="\n")
+    assert verify_generation(output)["generation_id"] == receipt["generation_id"]
+    generated_verifier = _load_module(output / "scripts/verify_generation.py")
+    assert generated_verifier.verify(output)["generation_id"] == receipt["generation_id"]
 
 
 def test_mutable_deployment_validation_evidence_is_source_commit_bound_not_tree_bound(

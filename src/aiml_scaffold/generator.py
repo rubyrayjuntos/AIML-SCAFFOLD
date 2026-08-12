@@ -24,11 +24,16 @@ IGNORED_RUNTIME_PARTS = {
     ".pytest_cache",
     ".ruff_cache",
     "__pycache__",
+    "build",
+    "dist",
 }
 
 
 def _is_runtime_path(path: Path, root: Path) -> bool:
-    return any(part in IGNORED_RUNTIME_PARTS for part in path.relative_to(root).parts)
+    return any(
+        part in IGNORED_RUNTIME_PARTS or part.endswith(".egg-info")
+        for part in path.relative_to(root).parts
+    )
 
 
 def _canonical_json(value: Any) -> str:
@@ -76,7 +81,7 @@ def generated_files_digest(root: Path) -> str:
             continue
         if relative in MUTABLE_GOVERNANCE_PATHS:
             continue
-        if any(part in IGNORED_RUNTIME_PARTS for part in path.relative_to(root).parts):
+        if _is_runtime_path(path, root):
             continue
         digest.update(relative.encode("utf-8"))
         digest.update(b"\0")

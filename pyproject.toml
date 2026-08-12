@@ -53,6 +53,7 @@ aiml_scaffold = [
   "templates/azure_ml_batch/mlops/azureml/deploy/batch/code/*",
   "templates/azure_ml_batch/platform/*",
   "templates/azure_ml_batch/scripts/*.py",
+  "templates/azure_ml_batch/scripts/*.py.j2",
   "templates/azure_ml_batch/tests/*.py",
 ]
 
