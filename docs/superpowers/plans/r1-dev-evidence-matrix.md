@@ -211,16 +211,45 @@ No backend reuse, identity reuse, federated credential change, role assignment, 
 
 Generation `f609...d027` and plan run `31623628917` remain immutable with disposition `rejected_before_apply`. Their binary plan and digest are ineligible for reuse.
 
-The replacement platform template now explicitly selects Azure ML identity-based default storage, retains the project workspace's system identity, creates a project-owned compute UAMI for model/MLflow storage operations, and declares purpose-scoped storage data roles and dependency ordering. It also replaces the incomplete two-file review artifact with schema `1.0`'s exact six-file set, structural sanitization, dual digests, provenance/backend/run binding, and action-summary verification. Platform tests and generated-repository static conformance pass locally. No replacement candidate has yet been published, planned, or applied.
+The replacement platform template now explicitly selects Azure ML identity-based default storage, retains the project workspace's system identity, creates a project-owned compute UAMI for model/MLflow storage operations, and declares purpose-scoped storage data roles and dependency ordering. It also replaces the incomplete two-file review artifact with schema `1.0`'s exact six-file set, structural sanitization, dual digests, provenance/backend/run binding, and action-summary verification. Platform tests and generated-repository static conformance passed locally; the replacement was then published and planned as recorded below. No apply occurred.
+
+### Replacement candidate and saved-plan review
+
+| Evidence | Sanitized result |
+|---|---|
+| Platform template commit | `08b60bb433c72c0dd57bb46293eb7944f4fa10ed` |
+| Platform CI | Run `31625749998` passed |
+| Reproducible wheel digest | `sha256:ace2d1b32971d375cfdb061b4afb7229a96634c6d47b49b10a4cc3090a721e01`; two clean builds matched |
+| Product generation ID | `sha256:12207f5bb4258460ad549669abd4f1b69f02491bb68f4bc3a3dcb72e6681cdab` |
+| Manifest digest | `sha256:61e2f5cafe93b65460886ef1189b7df5e9438f8d0c873ebb35f07db96262c588` |
+| Resolved-plan digest | `sha256:63f8ddfbdca984274265cf919cf7188726256fb2bfea87b628154465ffbdea81` |
+| Template digest | `sha256:4d3b6d07b9d31a2650c6555d8237f7f0fea1e89ae21e47a9b0a047ec3d77cdca` |
+| Generated-files digest | `sha256:76ff382fd870fa4d1628d4e7e374e3030d9a254df7c9da40d14f70697481a978` |
+| Product publication | PR `rubyrayjuntos/azure-aiml-ops#4`, merge commit `c399c738bee032b0b2277fd25a6377634d154634`; PR CI `31625919254` and main CI `31626023552` passed |
+| Saved-plan run | `31626134587`, attempt `1`; source protected product `main` at `c399c738...4634` |
+| Artifact | `terraform-plan-dev-31626134587-1`; six expected files only; expires 2026-09-11 |
+| Binary plan digest | `sha256:0441119e4856a086567fe0e228902be4d270a32a617bc7f9e10e1cb40f8ddd44` |
+| Sanitized JSON digest | `sha256:428c52cb9effd5e30c991720f23aafcb829a035b297cf94b7b7a2fdce001f468` |
+| Independent representation check | Exact Terraform `1.10.0` re-derived byte-identical sanitized JSON from the downloaded binary plan |
+| Provider | AzureRM `4.81.0`; lock digest `sha256:e23b20197002dae1c79db71736b06c67c7d4a7fb96b4d1433584c9aa2300c3f4` |
+| Action summary | 12 creates; 0 updates; 0 replacements; 0 deletes; 0 reads; 0 no-ops |
+| Identity/storage review | Workspace `SystemAssigned`; default storage access `Identity`; Shared Key disabled; project compute UAMI; compute and workflow Storage Blob Data Contributor scopes resolve directly to project storage |
+| Principal review | Workflow object ID matches intended deployment principal; compute and workspace principal IDs correctly remain known after apply; post-apply verification is generated and mandatory |
+| Boundary review | No bootstrap resource, subscription Owner, ACR, endpoint, Bicep resource, or resource-group overlap; all named workload resources target `rg-azure-ai-ml-ops-dev` |
+| Dev posture warnings | Public network access and compute node public IP/local authentication remain enabled for the R1 Dev profile; production private-network conformance is out of scope |
+| Apply | Not dispatched and not authorized |
+
+Disposition: `saved_plan_review_passed_apply_not_authorized`.
 
 Current classification:
 
-> **R1 preview—bootstrap-live and OIDC-live conformant; workload-plan execution proven, current candidate rejected before apply; Azure ML Dev lifecycle not live validated.**
+> **R1 preview—bootstrap-live, OIDC-live, and workload-plan-live conformant; reviewed workload plan saved; apply not authorized; Azure ML Dev lifecycle not live validated.**
 
 ## Documentation changelog
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.9.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded replacement generation `12207f5b...1cdab`, protected publication, saved-plan run `31626134587`, six-file artifact digests, independent JSON derivation, successful infrastructure review, and no-apply stop. |
 | 1.8.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded local completion of the bounded AML identity/RBAC and versioned six-file plan-artifact correction; replacement generation and saved plan remain pending. |
 | 1.7.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded saved plan `31623628917`, its immutable digests and ten-create review, and rejection for the Azure ML AccessKey/shared-key contradiction plus incomplete artifact bundle. |
 | 1.6.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded the safe pre-plan initialization failure in run `31623045228` and invalidated generation `cc099e52...bb47ea` for workload planning pending an OIDC environment-contract correction. |

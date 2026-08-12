@@ -13,8 +13,8 @@ This ledger is updated as implementation gates are completed. It must distinguis
 | Doctor hardening | Context, active/intended identity, backend management/data planes, shared-key posture, OIDC configuration, scoped RBAC, SKU/quota, and unexercised boundaries | Passed with mocked read-only Azure responses and negative paths; offline generated-project doctor passed |
 | Authenticated doctor | Real tenant/subscription context, resource group, backend, quotas, OIDC configuration, and RBAC | Bootstrap context, backend, OIDC configuration, and RBAC are live; GitHub OIDC proof run `31621923439` passed against replacement generation `cc099e52...bb47ea` |
 | Azure ML service schema | Pipeline compute/reference validation in a real workspace | Not executed; `az ml job validate` requires the not-yet-approved clean-room workspace |
-| Dev clean-room | Terraform apply, Azure ML run, registration, batch invocation, evidence, second clean plan | Workload plan run `31623628917` remains rejected and immutable. The bounded identity/RBAC and artifact-contract correction is locally conformant; replacement publication and saved-plan review are pending; workload remains unprovisioned. |
-| R1 release | Immutable package/template/workflow versions and compatibility matrix | Platform branch and generated candidates published through protected PRs; generated CI and read-only OIDC proof passed; current workload plan is rejected and no apply is authorized |
+| Dev clean-room | Terraform apply, Azure ML run, registration, batch invocation, evidence, second clean plan | Replacement plan run `31626134587` passed infrastructure and complete artifact-contract review with 12 creates and zero updates/replacements/deletes. Apply, Azure ML lifecycle, evidence writes, and second clean plan remain unexercised. |
+| R1 release | Immutable package/template/workflow versions and compatibility matrix | Platform correction commit `08b60bb` and product generation `12207f5b...1cdab` passed protected CI. The workload plan is review-conformant; no apply is authorized. |
 
 ## Candidate lineage
 
@@ -26,6 +26,7 @@ This ledger is updated as implementation gates are completed. It must distinguis
 | `sha256:e662bc826b5125aaef3563cdc7b73e7e9126d392664aa2cba4964ed38e72116e` | `invalidated_after_negative_oidc_proof` | Run `31620247861` proved GitHub emits the ID-qualified subject; Azure login failed before token issuance | GitHub workflow only; no Azure workload |
 | `sha256:cc099e528c371fb448550f37103b024d8b107203c7878a66a371163e86bb47ea` | `oidc_read_only_proven_plan_invalidated` | OIDC proof `31621923439` passed; plan run `31623045228` then stopped at init because the workflow omitted AzureRM's OIDC environment contract | OIDC token plus authorized/denied reads only; no plan artifact or Azure ML workload mutation |
 | `sha256:f609615fd8706c19ee12a99a2d62732061e0d3f43dc172a44780bd836d87d027` | `saved_plan_rejected_for_apply` | Run `31623628917` saved a 10-create plan; review found workspace `AccessKey` mode incompatible with disabled storage shared keys and found the JSON review artifact absent | State lock/read and saved plan only; no apply or Azure ML workload mutation |
+| `sha256:12207f5bb4258460ad549669abd4f1b69f02491bb68f4bc3a3dcb72e6681cdab` | `saved_plan_review_passed_apply_not_authorized` | Run `31626134587` produced the complete six-file artifact and a reviewed 12-create, zero-destructive-action plan with explicit AML identity storage and project-owned compute RBAC | State lock/read and saved plan only; no apply or Azure ML workload mutation |
 
 This entry is immutable history and must not be overwritten by the replacement candidate. Read-only discovery subsequently confirmed the intended tenant/subscription and found a same-subscription backend candidate, but no suitable least-privilege R1 GitHub OIDC identity.
 
@@ -35,6 +36,7 @@ For historical traceability, generation `857b...35bc6` used wheel digest `sha256
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.4.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded replacement generation `12207f5b...1cdab`, protected publication, saved-plan run `31626134587`, complete artifact verification, and successful pre-apply infrastructure review. |
 | 1.3.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded locally conformant identity-based AML storage, project-owned compute identity/RBAC, and the versioned six-file plan artifact contract pending replacement publication. |
 | 1.2.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded saved workload plan `31623628917`, immutable artifact evidence, and rejection before apply for storage authentication and artifact-contract defects. |
 | 1.1.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded safe workload-plan initialization failure `31623045228` and the generated AzureRM OIDC environment-contract correction. |
