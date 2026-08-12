@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Any, Generic, Literal, TypeVar
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -38,10 +38,7 @@ class FeatureRegistryEntry(BaseModel):
     source_datasets: list[str] = Field(min_length=1)
 
 
-T = TypeVar("T")
-
-
-class ResponseEnvelope(BaseModel, Generic[T]):
+class ResponseEnvelope[T](BaseModel):
     request_id: str
     source: str
     version: str
