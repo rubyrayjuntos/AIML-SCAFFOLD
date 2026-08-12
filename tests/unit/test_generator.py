@@ -10,6 +10,7 @@ from aiml_scaffold.doctor import doctor_project
 from aiml_scaffold.generator import (
     generate_project,
     generated_files_digest,
+    template_digest,
     verify_generation,
 )
 from platform_core.contracts.product_manifest import ProductManifest
@@ -36,6 +37,17 @@ def test_generation_is_byte_stable(tmp_path: Path, manifest_payload: dict) -> No
     assert _tree(first) == _tree(second)
     assert first_receipt == second_receipt
     assert verify_generation(first)["generation_id"] == first_receipt["generation_id"]
+
+
+def test_template_digest_ignores_runtime_cache_files(tmp_path: Path) -> None:
+    template = tmp_path / "templates"
+    template.mkdir()
+    (template / "tracked.j2").write_text("tracked\n", encoding="utf-8")
+    expected = template_digest(template)
+    cache = template / "scripts" / "__pycache__"
+    cache.mkdir(parents=True)
+    (cache / "runtime.cpython-312.pyc").write_bytes(b"runtime-specific")
+    assert template_digest(template) == expected
 
 
 def test_generation_refuses_non_empty_output(tmp_path: Path, manifest_payload: dict) -> None:

@@ -45,7 +45,12 @@ def template_root() -> Path:
 def template_digest(root: Path | None = None) -> str:
     source = root or template_root()
     digest = hashlib.sha256()
-    for path in sorted(file for file in source.rglob("*") if file.is_file()):
+    for path in sorted(
+        file
+        for file in source.rglob("*")
+        if file.is_file()
+        and not any(part in IGNORED_RUNTIME_PARTS for part in file.relative_to(source).parts)
+    ):
         relative = path.relative_to(source).as_posix()
         digest.update(relative.encode("utf-8"))
         digest.update(b"\0")
