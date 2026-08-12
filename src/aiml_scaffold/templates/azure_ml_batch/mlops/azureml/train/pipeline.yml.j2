@@ -16,7 +16,11 @@ outputs:
   evaluation_output:
   model_info_output:
 settings:
+{% if training_serverless_enabled %}
+  default_compute: azureml:serverless
+{% else %}
   default_compute: azureml:cpu-training
+{% endif %}
   default_datastore: azureml:workspaceblobstore
   continue_on_step_failure: false
 jobs:
@@ -24,6 +28,11 @@ jobs:
     type: command
     code: ../../../data-science/src
     environment: azureml:[[ project_name ]]-train-env:1
+{% if training_serverless_enabled %}
+    resources:
+      instance_type: [[ execution.training.cloud_fallback.instance_type ]]
+      instance_count: 1
+{% endif %}
     command: >-
       python prepare.py --input ${{inputs.input}}
       --train-output ${{outputs.train}}
@@ -37,6 +46,11 @@ jobs:
     type: command
     code: ../../../data-science/src
     environment: azureml:[[ project_name ]]-train-env:1
+{% if training_serverless_enabled %}
+    resources:
+      instance_type: [[ execution.training.cloud_fallback.instance_type ]]
+      instance_count: 1
+{% endif %}
     command: python train.py --train-data ${{inputs.train}} --model-output ${{outputs.model}}
     inputs:
       train: ${{parent.jobs.prepare.outputs.train}}
@@ -46,6 +60,11 @@ jobs:
     type: command
     code: ../../../data-science/src
     environment: azureml:[[ project_name ]]-train-env:1
+{% if training_serverless_enabled %}
+    resources:
+      instance_type: [[ execution.training.cloud_fallback.instance_type ]]
+      instance_count: 1
+{% endif %}
     command: >-
       python evaluate.py --model-name [[ model_name ]]
       --model-input ${{inputs.model}} --test-data ${{inputs.test}}
@@ -61,6 +80,11 @@ jobs:
     type: command
     code: ../../../data-science/src
     environment: azureml:[[ project_name ]]-train-env:1
+{% if training_serverless_enabled %}
+    resources:
+      instance_type: [[ execution.training.cloud_fallback.instance_type ]]
+      instance_count: 1
+{% endif %}
     command: >-
       python register.py --model-name [[ model_name ]]
       --model-input ${{inputs.model}} --decision-input ${{inputs.decision}}

@@ -76,6 +76,109 @@ class InfrastructureSelection(BaseModel):
     azure: AzureInfrastructure
 
 
+class LocalDevelopmentExecution(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    provider: Literal["local"] = "local"
+    containerized: bool = True
+
+
+class AzureTrainingFallback(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = False
+    mode: Literal["azure_ml_serverless", "azure_ml_cluster"] | None = None
+    instance_type: str | None = None
+    tier: Literal["spot", "dedicated"] = "spot"
+    min_instances: Literal[0] = 0
+    max_instances: int = Field(default=1, ge=1, le=1, strict=True)
+    idle_seconds_before_scaledown: int = Field(default=120, ge=60, le=3600, strict=True)
+
+    @field_validator("instance_type")
+    @classmethod
+    def normalize_instance_type(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("instance_type cannot be empty")
+        return normalized
+
+    @model_validator(mode="after")
+    def require_explicit_cloud_intent(self) -> AzureTrainingFallback:
+        if self.enabled and (self.mode is None or self.instance_type is None):
+            raise ValueError(
+                "enabled Azure training requires explicit mode and instance_type"
+            )
+        if not self.enabled and (self.mode is not None or self.instance_type is not None):
+            raise ValueError(
+                "Azure training mode and instance_type require cloud_fallback.enabled=true"
+            )
+        return self
+
+
+class TrainingExecution(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    provider: Literal["local"] = "local"
+    cloud_fallback: AzureTrainingFallback = Field(default_factory=AzureTrainingFallback)
+
+
+class AzureBatchFallback(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = False
+    mode: Literal["azure_ml_cluster"] | None = None
+    instance_type: str | None = None
+    tier: Literal["spot", "dedicated"] = "dedicated"
+    min_instances: Literal[0] = 0
+    max_instances: int = Field(default=1, ge=1, le=1, strict=True)
+    idle_seconds_before_scaledown: int = Field(default=120, ge=60, le=3600, strict=True)
+
+    @field_validator("instance_type")
+    @classmethod
+    def normalize_instance_type(cls, value: str | None) -> str | None:
+        return AzureTrainingFallback.normalize_instance_type(value)
+
+    @model_validator(mode="after")
+    def require_explicit_cloud_intent(self) -> AzureBatchFallback:
+        if self.enabled and (self.mode is None or self.instance_type is None):
+            raise ValueError(
+                "enabled Azure batch requires explicit mode and instance_type"
+            )
+        if not self.enabled and (self.mode is not None or self.instance_type is not None):
+            raise ValueError(
+                "Azure batch mode and instance_type require cloud_fallback.enabled=true"
+            )
+        return self
+
+
+class BatchExecution(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    provider: Literal["local"] = "local"
+    cloud_fallback: AzureBatchFallback = Field(default_factory=AzureBatchFallback)
+
+
+class ExecutionPolicy(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    development: LocalDevelopmentExecution = Field(
+        default_factory=LocalDevelopmentExecution
+    )
+    training: TrainingExecution = Field(default_factory=TrainingExecution)
+    batch: BatchExecution = Field(default_factory=BatchExecution)
+
+
+class CostPolicy(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    cloud_execution_requires_approval: Literal[True] = True
+    default_max_nodes: Literal[1] = 1
+    permit_spot_training: bool = True
+    retain_idle_clusters: Literal[False] = False
+
+
 class PlatformPolicy(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -180,13 +283,6 @@ class AzureMlProviderExtension(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     location: str | None = None
-    compute_size: str | None = None
-    batch_compute_max_instances: int | None = Field(
-        default=None, ge=1, le=100, strict=True
-    )
-    training_compute_max_instances: int | None = Field(
-        default=None, ge=1, le=100, strict=True
-    )
 
     @field_validator("location")
     @classmethod
@@ -197,17 +293,6 @@ class AzureMlProviderExtension(BaseModel):
         if not normalized:
             raise ValueError("location cannot be empty")
         return normalized
-
-    @field_validator("compute_size")
-    @classmethod
-    def normalize_compute_size(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        normalized = value.strip()
-        if not normalized:
-            raise ValueError("compute_size cannot be empty")
-        return normalized
-
 
 class ProviderExtensions(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -324,6 +409,8 @@ class ProductManifest(BaseModel):
     product: ProductIdentity
     capabilities: CapabilitySelection
     infrastructure: InfrastructureSelection
+    execution: ExecutionPolicy = Field(default_factory=ExecutionPolicy)
+    cost_policy: CostPolicy = Field(default_factory=CostPolicy)
     policy: PlatformPolicy
     shared_resources: SharedResources
     environments: list[Environment] = Field(default_factory=lambda: ["dev"])
@@ -358,6 +445,12 @@ class ProductManifest(BaseModel):
             raise ValueError("agent definition is present but the agent capability is disabled")
         if self.tools and not self.capabilities.agent:
             raise ValueError("tool contract is present but the agent capability is disabled")
+        if (
+            self.execution.training.cloud_fallback.tier == "spot"
+            and self.execution.training.cloud_fallback.enabled
+            and not self.cost_policy.permit_spot_training
+        ):
+            raise ValueError("spot training is prohibited by cost policy")
         backend_resource_group_subscription = (
             self.shared_resources.terraform_backend.resource_group_id.split("/", 3)[2].lower()
         )

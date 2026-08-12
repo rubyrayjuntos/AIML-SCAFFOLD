@@ -48,6 +48,7 @@ aiml_scaffold = [
   "templates/azure_ml_batch/.gitignore",
   "templates/azure_ml_batch/infra/terraform/*",
   "templates/azure_ml_batch/infra/terraform/.terraform.lock.hcl",
+  "templates/azure_ml_batch/local/*",
   "templates/azure_ml_batch/mlops/azureml/train/*",
   "templates/azure_ml_batch/mlops/azureml/deploy/batch/*",
   "templates/azure_ml_batch/mlops/azureml/deploy/batch/code/*",

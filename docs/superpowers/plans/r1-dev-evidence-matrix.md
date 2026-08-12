@@ -118,6 +118,22 @@ An earlier wheel built directly from the long-lived worktree was rejected becaus
 
 Generation `sha256:e662bc826b5125aaef3563cdc7b73e7e9126d392664aa2cba4964ed38e72116e` is permanently invalidated. GitHub Actions run `31620247861` reached Azure login without issuing an Azure token and proved that this repository emits the immutable subject `repo:rubyrayjuntos@204968804/azure-aiml-ops@1331566719:environment:dev`; the candidate manifest instead declared the conventional repository-name subject. No Terraform workload plan/apply or Azure ML operation occurred.
 
+## Compute-policy replacement: 2026-08-12
+
+The unpublished compute-bound candidate `sha256:54b4af8c...d7b6c0` is retired before publication or planning. Its implicit `Standard_D4s_v5` dependency was unavailable for the intended East US subscription. No replacement SKU was selected and no Azure resource was mutated.
+
+The owner authorized a local-first replacement: Azure training and batch compute are independent explicit opt-ins, any enabled Dev cluster has a one-node maximum, and every charged cloud workload requires separate cost-aware authorization. Local generated lifecycle execution is static/local evidence only and does not change the Azure ML Dev-live boundary.
+
+| Evidence | Result |
+|---|---|
+| Rejected generation | `sha256:54b4af8c...d7b6c0`; abbreviated historical identifier pending full immutable product record |
+| Rejection reason | Implicit compute SKU unavailable for the deployment subscription in East US |
+| Publication or Azure mutation | None |
+| Replacement architecture | ADR 0010; local-first base, explicit Azure serverless or scale-to-zero fallback, one-node Dev ceiling |
+| Local lifecycle proof | Generated prepare, train, evaluate, package, score, local evidence succeeded in a temporary clean directory |
+| Terraform static proof | Local-first generated Terraform formatted, initialized with backend disabled, and validated |
+| Remaining boundary | Protected publication, authenticated read-only validation, replacement saved plan, and all Azure ML workload execution pending |
+
 ## Bootstrap deployment: 2026-08-11
 
 The approved bootstrap completed against the remote Entra-authenticated backend. The state container was created privately, imported before planning, and retained throughout. The original saved plan contained 13 creates and one imported-container no-op, with zero changes/deletes and no Owner assignment. GitHub rejected the required-reviewer rule for the private repository because the current billing plan does not support it. Existing resources and state were preserved; a corrective plan containing only the Dev environment and four identifier-only secrets completed successfully.
@@ -275,6 +291,7 @@ Current classification:
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.15.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Retired the unpublished implicit-SKU candidate, recorded the authorized local-first compute policy and successful temporary local lifecycle/Terraform validation, and preserved Azure/cloud planning as pending. |
 | 1.14.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Retired run `31632608556` as `superseded_before_apply` because the mandatory deployment-governance artifact was absent; confirmed no resources were mutated. |
 | 1.13.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded final governance-hardened generation, protected publication, saved-plan run `31632608556`, provenance/expiry/state binding, independent JSON and live state verification, infrastructure review, and no-apply stop. |
 | 1.12.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded saved plan `31632141125`, its safe apply-path verification failure, and the bounded nested-state/backend-HCL verifier correction. |

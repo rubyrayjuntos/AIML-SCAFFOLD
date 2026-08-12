@@ -102,7 +102,7 @@ def test_generation_refuses_non_empty_output(tmp_path: Path, manifest_payload: d
         )
 
 
-def test_generated_project_is_r1_batch_only(
+def test_generated_project_is_local_first_r1_batch_capable(
     tmp_path: Path, manifest_payload: dict, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr("aiml_scaffold.doctor.shutil.which", lambda _: "/usr/bin/tool")
@@ -120,14 +120,16 @@ def test_generated_project_is_r1_batch_only(
     assert "> **Status:** Planning" in deployment_plan_text
     assert "Pure Terraform through the protected saved-plan workflow" in deployment_plan_text
     assert "azd or Bicep" in deployment_plan_text
-    assert (output / "mlops/azureml/deploy/batch/deployment.yml").is_file()
+    assert (output / "scripts/run_local_lifecycle.py").is_file()
+    assert (output / "local/Dockerfile").is_file()
+    assert not (output / "mlops/azureml/deploy/batch/deployment.yml").exists()
+    assert not (output / ".github/workflows/deploy-batch.yml").exists()
+    assert not (output / ".github/workflows/train.yml").exists()
     assert not (output / "infra/bicep").exists()
     assert not (output / "foundry").exists()
     assert not (output / "databricks").exists()
-    deployment = (output / "mlops/azureml/deploy/batch/deployment.yml").read_text()
-    assert "@latest" not in deployment
     receipt = json.loads((output / "generation-receipt.json").read_text())
-    assert receipt["providers"]["serving"] == "azure_ml_batch"
+    assert receipt["providers"]["serving"] == "local_scoring"
     source_manifest = (output / "platform/source-manifest.yaml").read_text()
     resolved_plan = json.loads((output / "platform/resolved-plan.json").read_text())
     assert "Example Risk" in source_manifest
@@ -153,13 +155,14 @@ def test_wheel_package_data_includes_hidden_deployment_plan_template() -> None:
     assert "templates/azure_ml_batch/.azure/*" in package_data
     assert "templates/azure_ml_batch/scripts/*.py" in package_data
     assert "templates/azure_ml_batch/scripts/*.py.j2" in package_data
+    assert "templates/azure_ml_batch/local/*" in package_data
     excluded = setuptools["exclude-package-data"]["aiml_scaffold"]
     assert "templates/azure_ml_batch/scripts/__pycache__/*" in excluded
     assert "templates/**/__pycache__/*" in excluded
     assert "templates/**/*.pyc" in excluded
 
 
-def test_generated_terraform_uses_identity_storage_and_project_owned_compute_identity(
+def test_local_first_terraform_omits_compute_identity_and_clusters(
     tmp_path: Path, manifest_payload: dict
 ) -> None:
     output = tmp_path / "project"
@@ -170,15 +173,14 @@ def test_generated_terraform_uses_identity_storage_and_project_owned_compute_ide
     )
     terraform = (output / "infra/terraform/main.tf").read_text(encoding="utf-8")
     assert 'storage_account_access_type   = "Identity"' in terraform
-    assert 'resource "azurerm_user_assigned_identity" "compute"' in terraform
-    assert 'resource "azurerm_role_assignment" "compute_storage"' in terraform
+    assert 'resource "azurerm_user_assigned_identity" "compute"' not in terraform
+    assert 'resource "azurerm_role_assignment" "compute_storage"' not in terraform
     assert 'resource "azurerm_role_assignment" "workspace_storage"' in terraform
     assert 'resource "azurerm_role_assignment" "workflow_storage"' in terraform
-    assert "azurerm_user_assigned_identity.compute.principal_id" in terraform
+    assert "azurerm_user_assigned_identity.compute.principal_id" not in terraform
     assert "azurerm_machine_learning_workspace.this.identity[0].principal_id" in terraform
     assert "scope                            = azurerm_storage_account.this.id" in terraform
-    assert 'type         = "UserAssigned"' in terraform
-    assert "depends_on = [azurerm_role_assignment.compute_storage]" in terraform
+    assert 'resource "azurerm_machine_learning_compute_cluster"' not in terraform
     assert "workflow_evidence" not in terraform
     operational_files = [
         output / "infra/terraform/main.tf",
@@ -190,6 +192,36 @@ def test_generated_terraform_uses_identity_storage_and_project_owned_compute_ide
     ).lower()
     for prohibited in ("accesskey", "accountkey", "listkeys", "connection_string", "sas_token"):
         assert prohibited not in operational_text
+
+
+def test_explicit_batch_cloud_policy_generates_one_node_cluster_and_guard(
+    tmp_path: Path, manifest_payload: dict
+) -> None:
+    manifest_payload["execution"]["batch"]["cloud_fallback"] = {
+        "enabled": True,
+        "mode": "azure_ml_cluster",
+        "instance_type": "Standard_D4s_v7",
+        "max_instances": 1,
+        "idle_seconds_before_scaledown": 120,
+    }
+    output = tmp_path / "project"
+    generate_project(
+        ProductManifest.model_validate(manifest_payload),
+        output,
+        allow_experimental=True,
+    )
+    terraform = (output / "infra/terraform/main.tf").read_text(encoding="utf-8")
+    workflow = (output / ".github/workflows/deploy-batch.yml").read_text(
+        encoding="utf-8"
+    )
+    assert 'resource "azurerm_machine_learning_compute_cluster" "batch"' in terraform
+    assert 'vm_size                       = "Standard_D4s_v7"' in terraform
+    assert "max_node_count                       = 1" in terraform
+    assert 'resource "azurerm_machine_learning_compute_cluster" "training"' not in terraform
+    assert "RUN_AZURE_BATCH_DEV" in workflow
+    assert (output / "mlops/azureml/deploy/batch/deployment.yml").is_file()
+    receipt = json.loads((output / "generation-receipt.json").read_text())
+    assert receipt["providers"]["serving_cloud"] == "azure_ml_batch"
 
 
 def test_generated_workflows_enforce_digest_bound_manual_apply(
@@ -526,11 +558,15 @@ def test_modified_provenance_fails_specific_digest_check(
         verify_generation(output)
 
 
-def test_normalized_provider_extension_changes_generation_identity(
+def test_normalized_compute_policy_changes_generation_identity(
     tmp_path: Path, manifest_payload: dict
 ) -> None:
     first_manifest = ProductManifest.model_validate(manifest_payload)
-    manifest_payload["provider_extensions"]["azure_ml"]["compute_size"] = "Standard_D8s_v5"
+    manifest_payload["execution"]["training"]["cloud_fallback"] = {
+        "enabled": True,
+        "mode": "azure_ml_serverless",
+        "instance_type": " Standard_D8s_v5 ",
+    }
     second_manifest = ProductManifest.model_validate(manifest_payload)
     _, first = generate_project(first_manifest, tmp_path / "first", allow_experimental=True)
     _, second = generate_project(second_manifest, tmp_path / "second", allow_experimental=True)

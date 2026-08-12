@@ -27,6 +27,23 @@ def generated_project(tmp_path: Path, manifest_payload: dict) -> Path:
     return project
 
 
+@pytest.fixture
+def cloud_generated_project(tmp_path: Path, manifest_payload: dict) -> Path:
+    manifest_payload["execution"]["training"]["cloud_fallback"] = {
+        "enabled": True,
+        "mode": "azure_ml_serverless",
+        "instance_type": "Standard_D4s_v5",
+        "max_instances": 1,
+    }
+    project = tmp_path / "cloud-project"
+    generate_project(
+        ProductManifest.model_validate(manifest_payload),
+        project,
+        allow_experimental=True,
+    )
+    return project
+
+
 def _check(result: dict, name: str) -> dict:
     return next(item for item in result["checks"] if item["check"] == name)
 
@@ -131,17 +148,17 @@ def test_authenticated_doctor_reports_each_preflight_boundary(
         "oidc_application_principal_relationship",
         "oidc_federated_credential",
         "environment_scoped_rbac",
-        "compute_sku_availability",
-        "compute_quota_sufficiency",
         "active_identity_match",
     ):
         assert _check(result, name)["status"] == "passed"
+    assert _check(result, "compute_sku_availability")["status"] == "not_applicable"
+    assert _check(result, "compute_quota_sufficiency")["status"] == "not_applicable"
     assert _check(result, "backend_state_write_and_lock")["status"] == "not_exercised"
     assert _check(result, "oidc_token_exchange")["status"] == "not_exercised"
 
 
 def test_authenticated_doctor_requests_subscription_aware_full_sku_metadata(
-    generated_project: Path, monkeypatch: pytest.MonkeyPatch
+    cloud_generated_project: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _configure_authenticated_doctor(monkeypatch)
     observed: list[list[str]] = []
@@ -151,7 +168,7 @@ def test_authenticated_doctor_requests_subscription_aware_full_sku_metadata(
         return _successful_azure_response(command)
 
     monkeypatch.setattr(doctor_module, "_run_read_only", record_commands)
-    result = doctor_module.doctor_project(generated_project, "dev")
+    result = doctor_module.doctor_project(cloud_generated_project, "dev")
     assert result["overall_status"] == "passed"
     sku_command = next(command for command in observed if command[1:3] == ["vm", "list-skus"])
     assert "--all" in sku_command
@@ -159,7 +176,7 @@ def test_authenticated_doctor_requests_subscription_aware_full_sku_metadata(
 
 
 def test_subscription_restricted_sku_fails_even_when_quota_exists(
-    generated_project: Path, monkeypatch: pytest.MonkeyPatch
+    cloud_generated_project: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _configure_authenticated_doctor(monkeypatch)
 
@@ -184,15 +201,17 @@ def test_subscription_restricted_sku_fails_even_when_quota_exists(
         return _successful_azure_response(command)
 
     monkeypatch.setattr(doctor_module, "_run_read_only", restricted_sku)
-    result = doctor_module.doctor_project(generated_project, "dev")
+    result = doctor_module.doctor_project(cloud_generated_project, "dev")
     sku_check = _check(result, "compute_sku_availability")
     assert sku_check["status"] == "failed"
-    assert sku_check["restrictions"][0]["reasonCode"] == "NotAvailableForSubscription"
+    assert sku_check["selections"][0]["restrictions"][0]["reasonCode"] == (
+        "NotAvailableForSubscription"
+    )
     assert _check(result, "compute_quota_sufficiency")["status"] == "passed"
 
 
 def test_context_mismatch_is_not_collapsed_into_other_checks(
-    generated_project: Path, monkeypatch: pytest.MonkeyPatch
+    cloud_generated_project: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _configure_authenticated_doctor(monkeypatch)
 
@@ -208,7 +227,7 @@ def test_context_mismatch_is_not_collapsed_into_other_checks(
         return _successful_azure_response(command)
 
     monkeypatch.setattr(doctor_module, "_run_read_only", mismatched_context)
-    result = doctor_module.doctor_project(generated_project, "dev")
+    result = doctor_module.doctor_project(cloud_generated_project, "dev")
     assert result["overall_status"] == "failed"
     assert _check(result, "azure_context_match")["status"] == "failed"
     assert _check(result, "backend_management_plane_visibility")["status"] == "passed"
@@ -231,7 +250,7 @@ def test_backend_data_plane_failure_is_reported_separately(
 
 
 def test_insufficient_quota_fails_without_changing_sku_result(
-    generated_project: Path, monkeypatch: pytest.MonkeyPatch
+    cloud_generated_project: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _configure_authenticated_doctor(monkeypatch)
 
@@ -249,7 +268,7 @@ def test_insufficient_quota_fails_without_changing_sku_result(
         return _successful_azure_response(command)
 
     monkeypatch.setattr(doctor_module, "_run_read_only", insufficient_quota)
-    result = doctor_module.doctor_project(generated_project, "dev")
+    result = doctor_module.doctor_project(cloud_generated_project, "dev")
     assert _check(result, "compute_sku_availability")["status"] == "passed"
     assert _check(result, "compute_quota_sufficiency")["status"] == "failed"
 

@@ -474,31 +474,88 @@ def _cloud_checks(
         )
     )
 
-    sku = config["compute_size"]
     region = config["location"]
-    sku_ok, sku_output = _run_read_only(
-        [
-            "az",
-            "vm",
-            "list-skus",
-            "--location",
-            region,
-            "--size",
-            sku,
-            "--all",
-            "--subscription",
-            deployment_subscription,
-            "--output",
-            "json",
-        ]
-    )
-    sku_entries = _json(sku_output) if sku_ok else []
-    exact_sku = next(
-        (item for item in sku_entries or [] if str(item.get("name", "")).lower() == sku.lower()),
-        None,
-    )
-    restrictions = (exact_sku or {}).get("restrictions", [])
-    sku_available = bool(exact_sku and not restrictions)
+    execution = config["execution"]
+    selections = [
+        {
+            "purpose": purpose,
+            "sku": settings.get("instance_type"),
+            "max_nodes": int(settings["max_instances"]),
+        }
+        for purpose, settings in (
+            ("training", execution["training_cloud"]),
+            ("batch", execution["batch_cloud"]),
+        )
+        if settings["enabled"]
+    ]
+    if not selections:
+        checks.append(
+            _check(
+                "compute_sku_availability",
+                CheckStatus.NOT_APPLICABLE,
+                "No Azure cloud compute is enabled in the local-first profile.",
+                region=region,
+                selections=[],
+            )
+        )
+        checks.append(
+            _check(
+                "compute_quota_sufficiency",
+                CheckStatus.NOT_APPLICABLE,
+                "No Azure VM-family quota is requested by the local-first profile.",
+                region=region,
+                configured_max_nodes=0,
+                required_vcpus=0,
+            )
+        )
+        return checks
+
+    discovered: list[dict[str, Any]] = []
+    for selection in selections:
+        sku = str(selection["sku"])
+        sku_ok, sku_output = _run_read_only(
+            [
+                "az",
+                "vm",
+                "list-skus",
+                "--location",
+                region,
+                "--size",
+                sku,
+                "--all",
+                "--subscription",
+                deployment_subscription,
+                "--output",
+                "json",
+            ]
+        )
+        sku_entries = _json(sku_output) if sku_ok else []
+        exact_sku = next(
+            (
+                item
+                for item in sku_entries or []
+                if str(item.get("name", "")).lower() == sku.lower()
+            ),
+            None,
+        )
+        restrictions = (exact_sku or {}).get("restrictions", [])
+        capabilities = {
+            item.get("name"): item.get("value")
+            for item in (exact_sku or {}).get("capabilities", [])
+        }
+        discovered.append(
+            {
+                **selection,
+                "available": bool(exact_sku and not restrictions),
+                "restrictions": restrictions,
+                "vm_family": str((exact_sku or {}).get("family", "")),
+                "vcpus_per_node": int(
+                    capabilities.get("vCPUs", capabilities.get("vCPUsAvailable", 0))
+                    or 0
+                ),
+            }
+        )
+    sku_available = all(item["available"] for item in discovered)
     checks.append(
         _check(
             "compute_sku_availability",
@@ -509,19 +566,9 @@ def _cloud_checks(
                 else "Selected compute SKU is unavailable or restricted."
             ),
             region=region,
-            sku=sku,
-            restrictions=restrictions,
+            selections=discovered,
         )
     )
-
-    capabilities = {
-        item.get("name"): item.get("value") for item in (exact_sku or {}).get("capabilities", [])
-    }
-    family = str((exact_sku or {}).get("family", ""))
-    vcpus = int(capabilities.get("vCPUs", capabilities.get("vCPUsAvailable", 0)) or 0)
-    training_max = int(plan["applied_defaults"]["training_compute_max_instances"])
-    batch_max = int(plan["applied_defaults"]["batch_compute_max_instances"])
-    required_vcpus = vcpus * (training_max + batch_max)
     usage_ok, usage_output = _run_read_only(
         [
             "az",
@@ -536,17 +583,38 @@ def _cloud_checks(
         ]
     )
     usages = _json(usage_output) if usage_ok else []
-    family_usage = next(
-        (
-            item
-            for item in usages or []
-            if str(item.get("name", {}).get("value", "")).lower() == family.lower()
-        ),
-        None,
+    family_requirements: dict[str, int] = {}
+    for item in discovered:
+        family = item["vm_family"].lower()
+        family_requirements[family] = family_requirements.get(family, 0) + (
+            item["vcpus_per_node"] * item["max_nodes"]
+        )
+    quota_details = []
+    for family, required_vcpus in sorted(family_requirements.items()):
+        family_usage = next(
+            (
+                item
+                for item in usages or []
+                if str(item.get("name", {}).get("value", "")).lower() == family
+            ),
+            None,
+        )
+        current = int((family_usage or {}).get("currentValue", 0))
+        limit = int((family_usage or {}).get("limit", 0))
+        quota_details.append(
+            {
+                "vm_family": family or None,
+                "required_vcpus": required_vcpus,
+                "current_usage": current,
+                "quota_limit": limit,
+                "sufficient": bool(
+                    family_usage and required_vcpus and current + required_vcpus <= limit
+                ),
+            }
+        )
+    quota_sufficient = bool(quota_details) and all(
+        item["sufficient"] for item in quota_details
     )
-    current = int((family_usage or {}).get("currentValue", 0))
-    limit = int((family_usage or {}).get("limit", 0))
-    quota_sufficient = bool(family_usage and vcpus and current + required_vcpus <= limit)
     checks.append(
         _check(
             "compute_quota_sufficiency",
@@ -557,13 +625,8 @@ def _cloud_checks(
                 else "Current VM-family quota does not cover configured maximum compute."
             ),
             region=region,
-            sku=sku,
-            vm_family=family or None,
-            vcpus_per_node=vcpus,
-            configured_max_nodes=training_max + batch_max,
-            required_vcpus=required_vcpus,
-            current_usage=current,
-            quota_limit=limit,
+            configured_max_nodes=sum(item["max_nodes"] for item in discovered),
+            families=quota_details,
             point_in_time=True,
         )
     )

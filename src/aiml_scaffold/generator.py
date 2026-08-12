@@ -23,9 +23,13 @@ IGNORED_RUNTIME_PARTS = {
     ".terraform",
     ".pytest_cache",
     ".ruff_cache",
+    ".local-runs",
     "__pycache__",
     "build",
     "dist",
+    "mlruns",
+    "mlartifacts",
+    "mlflow.db",
 }
 
 
@@ -177,10 +181,15 @@ def generate_project(
         "project_python_name": manifest.product.name.replace("-", "_"),
         "environment": environment,
         "location": plan.applied_defaults["location"],
-        "compute_size": plan.applied_defaults["compute_size"],
-        "batch_compute_max_instances": plan.applied_defaults["batch_compute_max_instances"],
-        "training_compute_max_instances": plan.applied_defaults[
-            "training_compute_max_instances"
+        "execution": plan.applied_defaults["execution"],
+        "cost_policy": plan.applied_defaults["cost_policy"],
+        "training_cluster_enabled": plan.applied_defaults["training_cluster_enabled"],
+        "training_serverless_enabled": plan.applied_defaults[
+            "training_serverless_enabled"
+        ],
+        "batch_cluster_enabled": plan.applied_defaults["batch_cluster_enabled"],
+        "compute_identity_required": plan.applied_defaults[
+            "compute_identity_required"
         ],
         "evidence_retention_days": plan.applied_defaults["evidence_retention_days"],
         "terraform_state_key": plan.applied_defaults["terraform_state_key"],
@@ -206,6 +215,17 @@ def generate_project(
         if path.is_file() and not _is_runtime_path(path, templates)
     ):
         relative = source.relative_to(template_root()).as_posix()
+        if not manifest.execution.training.cloud_fallback.enabled and relative in {
+            ".github/workflows/train.yml.j2",
+            "mlops/azureml/train/pipeline.yml.j2",
+            "mlops/azureml/train/train-env.yml.j2",
+        }:
+            continue
+        if not manifest.execution.batch.cloud_fallback.enabled and (
+            relative == ".github/workflows/deploy-batch.yml.j2"
+            or relative.startswith("mlops/azureml/deploy/batch/")
+        ):
+            continue
         destination_relative = relative[:-3] if relative.endswith(".j2") else relative
         destination = output / destination_relative
         destination.parent.mkdir(parents=True, exist_ok=True)

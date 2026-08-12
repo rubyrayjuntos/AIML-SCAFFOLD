@@ -44,9 +44,14 @@ terraform -chdir=/tmp/example-risk/infra/terraform fmt -check -recursive
 terraform -chdir=/tmp/example-risk/infra/terraform init -backend=false -lockfile=readonly
 terraform -chdir=/tmp/example-risk/infra/terraform validate
 actionlint /tmp/example-risk/.github/workflows/*.yml
+python /tmp/example-risk/scripts/run_local_lifecycle.py \
+  --output .local-runs/proof-1
+aiml-scaffold doctor /tmp/example-risk --environment dev --no-cloud
 ```
 
 Also parse all YAML, scan for secrets and scenario leakage, generate a second independent tree, and compare every byte. Runtime caches and Terraform working data are not tracked generated files and are excluded from receipt verification.
+
+The local runner executes the generated prepare, train, evaluate, conditional-package, scoring, and evidence code. It writes only beneath `.local-runs/` and does not require Azure. Its result is local evidence, not proof of Azure ML execution. If the manifest enables an Azure cloud fallback, validate the exact configured SKU and quota read-only; never substitute a different SKU. Dispatching a generated training or batch workflow requires separate cost-aware authorization.
 
 Verify that `platform/source-manifest.yaml`, `platform/resolved-plan.json`, and `constraints.txt` are tracked by the generated-files digest and independently attested by `generation-receipt.json`. Do not edit these files in a generated repository; change the source manifest or platform template and regenerate.
 
@@ -62,6 +67,7 @@ Authenticated `doctor` is read-only. Terraform apply, Azure ML job submission, e
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.0.0-rc6 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Added the local-first lifecycle proof, explicit-SKU cloud boundary, one-node Dev policy, and separate charged-compute authorization requirement. |
 | 1.0.0-rc5 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Documented the mutable deployment-validation evidence boundary and mandatory saved-plan digest binding. |
 | 1.0.0-rc4 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Required exact platform source-commit and wheel-digest provenance for release-candidate generation. |
 | 1.0.0-rc3 | 2026-08-11 | 2026-08-11 | Ray Swan / Codex | Documented explicit Azure context, deployment identity configuration, tri-state doctor outcomes, and unexercised OIDC/write boundaries. |

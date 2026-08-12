@@ -29,6 +29,23 @@ def manifest_payload() -> dict:
                 }
             },
             "infrastructure": {"azure": {"provider": "terraform"}},
+            "execution": {
+                "development": {"provider": "local", "containerized": True},
+                "training": {
+                    "provider": "local",
+                    "cloud_fallback": {"enabled": False},
+                },
+                "batch": {
+                    "provider": "local",
+                    "cloud_fallback": {"enabled": False},
+                },
+            },
+            "cost_policy": {
+                "cloud_execution_requires_approval": True,
+                "default_max_nodes": 1,
+                "permit_spot_training": True,
+                "retain_idle_clusters": False,
+            },
             "policy": {
                 "capability_maturity": "allow_preview",
                 "data_classification": "internal",
@@ -67,8 +84,6 @@ def manifest_payload() -> dict:
             "provider_extensions": {
                 "azure_ml": {
                     "location": "eastus",
-                    "compute_size": "Standard_D4s_v5",
-                    "batch_compute_max_instances": 4,
                 }
             },
         }

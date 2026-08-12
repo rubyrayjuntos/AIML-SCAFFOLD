@@ -32,10 +32,14 @@ def test_resolved_plan_explains_ownership_cost_and_defaults(manifest_payload: di
     assert plan.provider_extensions == {
         "azure_ml": {
             "location": "eastus",
-            "compute_size": "Standard_D4s_v5",
-            "batch_compute_max_instances": 4,
         }
     }
+    assert plan.providers["development"] == "local"
+    assert plan.providers["training"] == "local"
+    assert plan.providers["serving"] == "local_scoring"
+    assert plan.applied_defaults["training_cluster_enabled"] is False
+    assert plan.applied_defaults["batch_cluster_enabled"] is False
+    assert plan.applied_defaults["compute_identity_required"] is False
     assert plan.maturity_report == {
         "release_status": "preview",
         "manifest_policy": "allow_preview",
@@ -45,11 +49,29 @@ def test_resolved_plan_explains_ownership_cost_and_defaults(manifest_payload: di
     }
     assert {resource.cost_class.value for resource in plan.resources} == {
         "always_on",
-        "scale_to_zero",
         "job_scoped",
     }
     assert plan.approval_required is True
     assert all(resource.owner != "bicep" for resource in plan.resources)
+
+
+def test_cloud_training_and_batch_are_independent(manifest_payload: dict) -> None:
+    manifest_payload["execution"]["training"]["cloud_fallback"] = {
+        "enabled": True,
+        "mode": "azure_ml_serverless",
+        "instance_type": "Standard_D4s_v7",
+        "max_instances": 1,
+    }
+    plan = resolve_project_plan(
+        ProductManifest.model_validate(manifest_payload),
+        "dev",
+        allow_experimental=True,
+    )
+    assert plan.applied_defaults["training_serverless_enabled"] is True
+    assert plan.applied_defaults["training_cluster_enabled"] is False
+    assert plan.applied_defaults["batch_cluster_enabled"] is False
+    assert plan.providers["training_cloud"] == "azure_ml_serverless"
+    assert "serving_cloud" not in plan.providers
 
 
 def test_resolved_plan_reports_allowed_cross_subscription_backend(

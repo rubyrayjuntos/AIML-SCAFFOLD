@@ -37,18 +37,3 @@ variable "evidence_retention_days" {
     error_message = "Evidence retention must be between 1 and 3650 days."
   }
 }
-
-variable "training_compute_size" {
-  type    = string
-  default = "[[ compute_size ]]"
-}
-
-variable "batch_compute_max_instances" {
-  type    = number
-  default = [[ batch_compute_max_instances ]]
-}
-
-variable "training_compute_max_instances" {
-  type    = number
-  default = [[ training_compute_max_instances ]]
-}

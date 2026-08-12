@@ -1,9 +1,23 @@
 profile_version: 1
 environment: [[ environment ]]
 location: [[ location ]]
-compute_size: [[ compute_size ]]
-training_compute_max_instances: [[ training_compute_max_instances ]]
-batch_compute_max_instances: [[ batch_compute_max_instances ]]
+execution:
+  development:
+    provider: local
+    containerized: [[ execution.development.containerized | lower ]]
+  training_cloud:
+    enabled: [[ execution.training.cloud_fallback.enabled | lower ]]
+    mode: [[ execution.training.cloud_fallback.mode | default('null', true) ]]
+    instance_type: [[ execution.training.cloud_fallback.instance_type | default('null', true) ]]
+    max_instances: [[ execution.training.cloud_fallback.max_instances ]]
+  batch_cloud:
+    enabled: [[ execution.batch.cloud_fallback.enabled | lower ]]
+    mode: [[ execution.batch.cloud_fallback.mode | default('null', true) ]]
+    instance_type: [[ execution.batch.cloud_fallback.instance_type | default('null', true) ]]
+    max_instances: [[ execution.batch.cloud_fallback.max_instances ]]
+cost_policy:
+  cloud_execution_requires_approval: [[ cost_policy.cloud_execution_requires_approval | lower ]]
+  default_max_nodes: [[ cost_policy.default_max_nodes ]]
 resource_group: rg-[[ project_name ]]-[[ environment ]]
 workspace: mlw-[[ project_name ]]-[[ environment ]]
 model_name: [[ model_name ]]

@@ -1,12 +1,12 @@
 # R1 Azure ML Dev infrastructure deployment plan
 
-> **Status:** Validated
+> **Status:** Ready for Validation
 
 Generated: 2026-08-12
 
 ## 1. Project overview
 
-**Goal:** Add the mandatory deployment-governance artifact to every generated R1 Azure ML batch repository, validate a regenerated non-taxi Dev candidate, produce and review a new saved Terraform plan, and stop before apply for new digest-bound owner authorization.
+**Goal:** Make local execution the default Dev lifecycle, make Azure training and batch compute independently configurable and explicitly authorized, regenerate a non-taxi Dev candidate, produce and review a replacement saved Terraform plan, and stop before apply or any charged Azure ML workload.
 
 **Path:** Modify the existing Azure-first AIML-SCAFFOLD factory and regenerate the product repository. Do not edit generated lifecycle source manually.
 
@@ -16,7 +16,7 @@ Generated: 2026-08-12
 |---|---|
 | Classification | Development; R1 preview |
 | Scale | Small; one product and one Dev environment |
-| Budget | Cost-controlled; compute scales to zero |
+| Budget | Local-first; optional Dev cloud compute is serverless or scale-to-zero and limited to one node |
 | Subscription | Azure subscription 1 (`5b452321-32fd-4b1c-8bbf-6d69a5a587ad`) |
 | Tenant | `90a7175b-82cd-4815-9050-8cbae3a1d234` |
 | Location | East US (`eastus`) |
@@ -32,7 +32,7 @@ The manifest is authoritative for subscription, tenant, location, environment, o
 | Factory CLI and contracts | Python package | Python 3.11/3.12, Pydantic, Jinja | `src/aiml_scaffold/`, `src/platform_core/` |
 | Generated infrastructure | Infrastructure as code | Terraform 1.10.0, AzureRM 4.81.0 | `infra/terraform/` |
 | Deployment orchestration | Protected CI/CD | GitHub Actions and Entra OIDC | `.github/workflows/` |
-| ML lifecycle | Batch ML workflow | Azure ML CLI v2 YAML and Python | `mlops/azureml/`, `data-science/` |
+| ML lifecycle | Portable lifecycle with local and Azure adapters | Python, local container, Azure ML CLI v2 YAML | `data-science/`, `scripts/run_local_lifecycle.py`, `mlops/azureml/` |
 | Evidence | Append-only project evidence | Azure Blob plus GitHub artifacts | `scripts/emit_evidence.py`, `scripts/plan_artifact.py` |
 
 No Azure Developer CLI configuration exists, and none will be introduced. Bicep, Foundry, Search, Databricks, online serving, monitoring, retraining, Test, and Prod remain outside this deployment.
@@ -53,32 +53,36 @@ No Azure Developer CLI configuration exists, and none will be introduced. Bicep,
 | Storage and evidence | Azure Storage | Project-owned; Shared Key disabled; private evidence container and retention policy |
 | Secrets boundary | Azure Key Vault | Project-owned; RBAC authorization; no generated secrets |
 | Observability | Log Analytics and Application Insights | Project-owned Dev observability |
-| Compute | Two Azure ML compute clusters | Project-owned training and batch clusters; `Standard_D4s_v5`, minimum zero, maximum four nodes each |
-| Compute identity | User-assigned managed identity | Project-owned; storage data access for ML operations |
+| Compute | None in the default local-first profile | Azure training and batch compute are independent opt-ins; an enabled Dev cluster has minimum zero and maximum one node; serverless training creates no persistent cluster |
+| Compute identity | Conditional user-assigned managed identity | Project-owned and created only when an Azure ML cluster is enabled; storage data access for ML operations |
 | Workflow identity | Existing Entra OIDC principal | Bootstrap-owned; scoped workload deployment and project-storage evidence access |
-| RBAC | Three Storage Blob Data Contributor assignments | Workload Terraform; exact storage scope for workspace, compute, and workflow principals |
+| RBAC | Two base Storage Blob Data Contributor assignments, plus one conditional compute assignment | Workload Terraform; exact storage scope for workspace and workflow principals, and for the project compute principal only when cluster compute is enabled |
+
+The default Dev execution sequence is `prepare -> train -> evaluate -> package -> score -> local evidence`. It invokes the same generated lifecycle scripts, schemas, metric and promotion policy used by the Azure adapter. A local result is not evidence of Azure ML job submission, managed identity, lineage, registration, endpoint deployment, or batch execution.
+
+Cloud policy is explicit intent. Training may independently select Azure ML serverless or a scale-to-zero cluster. Batch may independently select a scale-to-zero cluster. No cloud fallback has an implicit VM SKU, and the factory must never replace an unavailable SKU. Every enabled Dev cluster has `max_instances = 1`. Workflow dispatch requires an explicit cost-aware authorization input before a charged compute operation can start.
 
 The one-resource/one-IaC-owner rule remains mandatory. Workload Terraform must not manage bootstrap state, the environment resource group, GitHub repository/environment, Entra application, or federated credential.
 
 ## 6. Provisioning-limit checklist
 
-Read-only quota and inventory checks were run against East US on 2026-08-12.
+The prior quota evidence is historical evidence for the rejected `Standard_D4s_v5` candidate. The replacement local-first base plan requests no Azure ML compute cluster or compute-family vCPU capacity. If cloud compute is later enabled, SKU availability and quota must be rediscovered read-only for the exact explicit instance type before planning and again before execution.
 
 | Resource or quota | Planned | Current | Total after deployment | Limit or available capacity | Evidence and result |
 |---|---:|---:|---:|---:|---|
-| Azure ML clusters | 2 | 5 | 7 | 200 | `az quota` `TotalClusters`; pass |
-| Azure ML total dedicated vCPUs | 32 maximum | 4 | 36 | 350 | `az quota` `TotalDedicatedCores`; pass |
-| Standard DSv5 family vCPUs | 32 maximum | 0 | 32 | 65 | `az vm list-usage` `standardDSv5Family`; pass |
+| Azure ML clusters | 0 by default | 5 | 5 | 200 | Local-first base profile; no compute cluster requested |
+| Azure ML total dedicated vCPUs | 0 by default | 4 | 4 | 350 | Charged cloud execution disabled by default |
+| VM-family vCPUs | 0 by default | Not applicable | Not applicable | Explicit-SKU discovery required when enabled | No default or silent replacement SKU |
 | Azure ML workspaces | 1 | 2 | 3 | No count quota exposed by `az quota` | ARM inventory plus successful provider plan; pass |
 | Storage accounts | 1 | 4 | 5 | 250 per region/subscription default | ARM inventory and Azure service limits; pass |
 | Key Vaults | 1 | 2 | 3 | No count quota exposed | ARM inventory plus successful provider plan; pass |
 | Log Analytics workspaces | 1 | 0 | 1 | No applicable count quota surfaced | ARM inventory plus successful provider plan; pass |
 | Application Insights components | 1 | 2 | 3 | No component-count quota surfaced | ARM inventory; workspace-based component; pass |
-| User-assigned managed identities | 1 | 2 | 3 | No count quota exposed | ARM inventory plus successful provider plan; pass |
-| Azure role assignments | 3 | 58 | 61 | 4,000 per subscription | `az role assignment list --all`; pass |
+| User-assigned managed identities | 0 by default | 2 | 2 | No count quota exposed | Conditional on enabled cluster compute |
+| Azure role assignments | 2 by default | 58 | 60 | 4,000 per subscription | Conditional compute role omitted with cluster compute |
 | Evidence container and storage policy | 2 child resources | 0 in new account | 2 | Bound to the single planned storage account | No independent subscription quota; pass |
 
-**Status:** All declared resources are within discovered limits. Maximum cluster capacity requires 32 DSv5 vCPUs; 33 remain after the declared maximum.
+**Status:** The local-first base profile declares no cloud compute capacity. Exact-SKU availability and quota are unresolved by design until a cloud fallback is explicitly configured.
 
 ## 7. Execution checklist
 
@@ -94,15 +98,17 @@ Read-only quota and inventory checks were run against East US on 2026-08-12.
 
 ### Phase 2: Factory integration
 
-- [x] Add a deterministic initial `.azure/deployment-plan.md` to the generated template.
-- [x] Treat deployment-plan status/proof and `.azure/validate-status.json` as mutable governance evidence bound by the product source commit and saved-plan digests, not as immutable generated-tree content.
-- [x] Add tests for deterministic initial content, exclusions, validation prerequisites, and provenance boundaries.
-- [x] Run platform tests, Ruff, generated repository tests, Actionlint, Terraform formatting/init/validation, and leakage checks.
-- [x] Set the plan status to `Ready for Validation` before handing off to Azure validation.
+- [x] Add strict execution and cost-policy contracts with local-first defaults and independent Azure training/batch fallbacks.
+- [x] Remove the implicit `Standard_D4s_v5` and four-node defaults.
+- [x] Generate cluster, compute identity, compute RBAC, outputs, and cloud workflows only when explicitly enabled.
+- [x] Add a local runner and pinned container that invoke the same lifecycle implementation as Azure ML.
+- [x] Require an explicit cost-aware workflow authorization before cloud compute execution.
+- [x] Update deterministic provenance, governance documentation, and tests.
+- [x] Run platform and generated-project conformance, then set the plan `Ready for Validation`.
 
 ### Phase 3: Validation and publication
 
-- [x] All validation checks pass:
+- [ ] All replacement validation checks pass:
   - [x] Terraform is installed.
   - [x] Azure CLI is installed and authenticated to the declared subscription.
   - [x] Generated Terraform initializes with the backend disabled and the checked-in lock file.
@@ -113,7 +119,7 @@ Read-only quota and inventory checks were run against East US on 2026-08-12.
   - [x] No unresolved Go-style environment template variables exist.
   - [x] No `main.tfvars.json` file is generated; JSON syntax validation is not applicable.
   - [x] Read-only Azure policy, inventory, role-assignment, SKU, and quota checks pass.
-- [x] Complete the repeated Azure validation workflow after subscription-aware doctor correction.
+- [ ] Complete the Azure validation workflow for the local-first candidate.
 - [ ] Mark the generated product plan `Validated` only through that workflow.
 - [ ] Build two byte-identical wheels and record the exact digest.
 - [ ] Regenerate two byte-identical product trees.
@@ -122,8 +128,9 @@ Read-only quota and inventory checks were run against East US on 2026-08-12.
 ### Phase 4: Replacement saved-plan gate
 
 - [x] Record run `31632608556` as `superseded_before_apply`, mandatory deployment-governance artifact absent, no resources mutated.
+- [ ] Retire the unpublished compute-bound generation `sha256:54b4af8c...d7b6c0` as blocked before publication because its implicit SKU was unavailable.
 - [ ] Produce a new saved Terraform plan from protected product `main` only.
-- [ ] Require exactly 13 creates and zero update, replacement, or destroy actions. The thirteenth create is the validation-discovered workspace-storage data-role assignment.
+- [ ] Derive and review the exact create count from the replacement local-first Terraform graph; require zero update, replacement, or destroy actions.
 - [ ] Reproduce the sanitized JSON with Terraform 1.10.0.
 - [ ] Rebind and recheck backend identity plus state lineage, serial, and content digest.
 - [ ] Request new deliberate, digest-bound owner authorization.
@@ -190,16 +197,19 @@ Failed deployment retains state, GitHub evidence, and any project-local evidence
 
 ## 11. Next steps
 
-Current phase: platform correction is validated; product progression is blocked on an explicit compute-SKU intent decision.
+Current phase: the compute-policy change is owner-authorized and approved for implementation; validation, publication, replacement planning, Terraform apply, and Azure ML workload execution remain incomplete.
 
-1. Implement the factory-generated governance artifact and validation workflow integration.
-2. Complete the documented Azure validation workflow.
-3. Stop again after replacement saved-plan review for new apply authorization.
+1. Implement and statically validate the local-first compute contract.
+2. Publish through protected platform and product PR/CI and regenerate deterministically.
+3. Produce and review a replacement saved plan from protected product `main`.
+4. Stop before Terraform apply or any charged Azure ML compute operation.
 
 ## Documentation changelog
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 2.1.0 | 2026-08-12 | 2026-08-12 | Ray Swan / Codex | Completed local factory integration and advanced the owner-approved compute-policy change to Ready for Validation after 119 platform tests, deterministic generation, local/cloud generated conformance, Terraform validation, and local lifecycle proof. |
+| 2.0.0 | 2026-08-12 | 2026-08-12 | Ray Swan / Codex | Reopened the plan for the authorized local-first compute-policy redesign; removed implicit SKU and four-node Dev defaults, made cloud training and batch independent opt-ins, and retained separate apply and charged-compute gates. |
 | 1.9.0 | 2026-08-12 | 2026-08-12 | Ray Swan / Codex | Repeated platform validation successfully at 112 tests after making SKU discovery subscription-restriction-aware; product planning remains stopped. |
 | 1.8.0 | 2026-08-12 | 2026-08-12 | Ray Swan / Codex | Recorded the authenticated product doctor SKU stop and corrected doctor to request complete subscription-aware SKU restriction metadata. |
 | 1.7.0 | 2026-08-12 | 2026-08-12 | Ray Swan / Codex | Repeated the full Azure validation workflow successfully after installed-wheel and post-install provenance corrections; restored Validated status. |

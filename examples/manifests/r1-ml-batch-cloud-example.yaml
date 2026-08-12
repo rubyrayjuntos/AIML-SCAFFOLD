@@ -1,7 +1,7 @@
 manifest_schema_version: "1.0"
 platform_version: "1.0.0"
 product:
-  name: example-risk
+  name: example-risk-cloud
   owner: ml-platform@example.com
   cost_center: CC-1234
 capabilities:
@@ -18,11 +18,21 @@ execution:
   training:
     provider: local
     cloud_fallback:
-      enabled: false
+      enabled: true
+      mode: azure_ml_serverless
+      instance_type: Standard_D4s_v7
+      tier: spot
+      max_instances: 1
   batch:
     provider: local
     cloud_fallback:
-      enabled: false
+      enabled: true
+      mode: azure_ml_cluster
+      instance_type: Standard_D4s_v7
+      tier: dedicated
+      min_instances: 0
+      max_instances: 1
+      idle_seconds_before_scaledown: 120
 cost_policy:
   cloud_execution_requires_approval: true
   default_max_nodes: 1
@@ -43,7 +53,7 @@ shared_resources:
       object_id_environment_variable: AZURE_CLIENT_OBJECT_ID
       federated_credential:
         issuer: https://token.actions.githubusercontent.com
-        subject: repo:example/example-risk:environment:dev
+        subject: repo:example/example-risk-cloud:environment:dev
         audience: api://AzureADTokenExchange
   terraform_backend:
     resource_group_id: /subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-platform-state

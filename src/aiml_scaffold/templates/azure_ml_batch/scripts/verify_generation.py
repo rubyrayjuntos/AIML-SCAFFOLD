@@ -20,9 +20,13 @@ IGNORED_RUNTIME_PARTS = {
     ".terraform",
     ".pytest_cache",
     ".ruff_cache",
+    ".local-runs",
     "__pycache__",
     "build",
     "dist",
+    "mlruns",
+    "mlartifacts",
+    "mlflow.db",
 }
 
 

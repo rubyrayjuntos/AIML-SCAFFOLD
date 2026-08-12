@@ -28,9 +28,15 @@ def resolve_project_plan(
             f"Azure ML location {location!r} is not allowed by policy "
             f"{manifest.policy.allowed_regions}"
         )
-    compute_size = extension.compute_size or "Standard_D4s_v5"
-    batch_max = extension.batch_compute_max_instances or 4
-    training_max = extension.training_compute_max_instances or 4
+    training_cloud = manifest.execution.training.cloud_fallback
+    batch_cloud = manifest.execution.batch.cloud_fallback
+    training_cluster_enabled = (
+        training_cloud.enabled and training_cloud.mode == "azure_ml_cluster"
+    )
+    training_serverless_enabled = (
+        training_cloud.enabled and training_cloud.mode == "azure_ml_serverless"
+    )
+    batch_cluster_enabled = batch_cloud.enabled
     azure_context = manifest.shared_resources.azure_context
     backend_subscription = manifest.shared_resources.terraform_backend.subscription_id
     deployment_subscription = str(azure_context.subscription_id).lower()
@@ -59,28 +65,51 @@ def resolve_project_plan(
             cost_class=ResourceCostClass.ALWAYS_ON,
         ),
         PlannedResource(
-            kind="azure_ml_training_compute",
-            owner="terraform",
-            cost_class=ResourceCostClass.SCALE_TO_ZERO,
-        ),
-        PlannedResource(
-            kind="azure_ml_batch_compute",
-            owner="terraform",
-            cost_class=ResourceCostClass.SCALE_TO_ZERO,
-        ),
-        PlannedResource(
-            kind="azure_ml_training_and_batch_jobs",
-            owner="azure_ml",
+            kind="local_ml_lifecycle",
+            owner="generated_project",
             cost_class=ResourceCostClass.JOB_SCOPED,
+            notes="Default Dev prepare, train, evaluate, package, score, and evidence path.",
         ),
     ]
+    if training_serverless_enabled:
+        resources.append(
+            PlannedResource(
+                kind="azure_ml_serverless_training_jobs",
+                owner="azure_ml",
+                cost_class=ResourceCostClass.JOB_SCOPED,
+                notes="Charged only when explicitly authorized and submitted.",
+            )
+        )
+    if training_cluster_enabled:
+        resources.append(
+            PlannedResource(
+                kind="azure_ml_training_compute",
+                owner="terraform",
+                cost_class=ResourceCostClass.SCALE_TO_ZERO,
+                notes="Explicit SKU; zero minimum and one-node Dev maximum.",
+            )
+        )
+    if batch_cluster_enabled:
+        resources.append(
+            PlannedResource(
+                kind="azure_ml_batch_compute",
+                owner="terraform",
+                cost_class=ResourceCostClass.SCALE_TO_ZERO,
+                notes="Explicit SKU; zero minimum and one-node Dev maximum.",
+            )
+        )
     providers = {
         "infrastructure": "terraform",
-        "training": "azure_ml",
+        "development": "local",
+        "training": "local",
         "registry": "azure_ml",
-        "serving": "azure_ml_batch",
+        "serving": "local_scoring",
         "evidence": "azure_blob",
     }
+    if training_cloud.enabled:
+        providers["training_cloud"] = str(training_cloud.mode)
+    if batch_cloud.enabled:
+        providers["serving_cloud"] = "azure_ml_batch"
     return ResolvedProjectPlan(
         manifest_schema_version=manifest.manifest_schema_version,
         platform_version=manifest.platform_version,
@@ -117,9 +146,14 @@ def resolve_project_plan(
         capabilities=descriptors,
         applied_defaults={
             "location": location,
-            "compute_size": compute_size,
-            "batch_compute_max_instances": batch_max,
-            "training_compute_max_instances": training_max,
+            "execution": manifest.execution.model_dump(mode="json"),
+            "cost_policy": manifest.cost_policy.model_dump(mode="json"),
+            "training_cluster_enabled": training_cluster_enabled,
+            "training_serverless_enabled": training_serverless_enabled,
+            "batch_cluster_enabled": batch_cluster_enabled,
+            "compute_identity_required": (
+                training_cluster_enabled or batch_cluster_enabled
+            ),
             "evidence_retention_days": manifest.policy.evidence_retention_days,
             "terraform_state_key": f"{manifest.product.name}-{environment}.tfstate",
             "capability_maturity_policy": manifest.policy.capability_maturity.value,
@@ -132,21 +166,26 @@ def resolve_project_plan(
         ),
         generated_components=[
             "terraform",
-            "azure_ml_training",
+            "local_ml_lifecycle",
+            "local_scoring",
             "azure_ml_registry",
-            "azure_ml_batch",
             "azure_blob_evidence",
             "github_actions",
-        ],
+        ]
+        + (["azure_ml_training"] if training_cloud.enabled else [])
+        + (["azure_ml_batch"] if batch_cloud.enabled else []),
         resources=resources,
         preconditions=[
             "Environment resource group exists.",
             "Terraform backend exists and is reachable.",
             "GitHub OIDC deployment identity has scoped environment permissions.",
-            "Azure ML and required regional VM quota are available.",
+            "Exact regional SKU availability and quota are verified when cloud compute is enabled.",
+            "Each charged cloud compute workflow receives deliberate authorization.",
         ],
         warnings=[
             "R1 providers remain preview until the Dev clean-room proof succeeds.",
+            "Local lifecycle evidence does not prove Azure ML execution, identity, "
+            "lineage, registration, or batch serving.",
             "Bicep, online serving, monitoring, retraining, Foundry, Search, and "
             "Databricks are excluded.",
         ],

@@ -6,6 +6,10 @@ on:
         description: Explicit metric for the approved champion; use -1 when none exists
         required: true
         default: "-1"
+      cloud_compute_authorization:
+        description: Type RUN_AZURE_TRAINING_DEV to authorize charged Azure compute
+        required: true
+        type: string
 permissions:
   id-token: write
   contents: read
@@ -15,6 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Enforce cost-aware cloud authorization
+        env:
+          AUTHORIZATION: ${{ inputs.cloud_compute_authorization }}
+        run: test "$AUTHORIZATION" = "RUN_AZURE_TRAINING_DEV"
       - uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
