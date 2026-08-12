@@ -14,7 +14,7 @@ This ledger is updated as implementation gates are completed. It must distinguis
 | Authenticated doctor | Real tenant/subscription context, resource group, backend, quotas, OIDC configuration, and RBAC | Bootstrap context, backend, OIDC configuration, and RBAC are live; replacement candidate passed offline doctor and awaits GitHub OIDC proof |
 | Azure ML service schema | Pipeline compute/reference validation in a real workspace | Not executed; `az ml job validate` requires the not-yet-approved clean-room workspace |
 | Dev clean-room | Terraform apply, Azure ML run, registration, batch invocation, evidence, second clean plan | Bootstrap-only Terraform apply and clean second plan passed; generated Azure ML workload remains ungenerated and unexecuted |
-| R1 release | Immutable package/template/workflow versions and compatibility matrix | Platform source committed; reproducible wheel and replacement candidate verified locally; remote publication and OIDC proof pending |
+| R1 release | Immutable package/template/workflow versions and compatibility matrix | Platform branch and generated candidate published; generated CI passed; OIDC proof blocked by unavailable private-repository branch protection |
 
 ## Candidate lineage
 
@@ -22,7 +22,7 @@ This ledger is updated as implementation gates are completed. It must distinguis
 |---|---|---|---|
 | `sha256:73a2ae86b11cb256cc8680c3a4ff501d0b2982aa9075081f0c2c2497aa39eb6c` | `invalidated_before_cloud_preflight` | Placeholder Azure context and backend references | `false` |
 | `sha256:fbcc524f7a2cd2b108dcc6e87d1dc88d802597a4e2b9bb53adf643c0958dc813` | `invalidated_before_publication` | Built from a dirty local build directory that contributed a stale deleted template; never pushed | `false` |
-| `sha256:857b86e6b8566765d3b780549a52100092fc3479d679ac961d5c22c73a835bc6` | `publication_candidate` | Generated twice from the clean reproducible wheel built from platform commit `35356bc` using live bootstrap references | `false` |
+| `sha256:857b86e6b8566765d3b780549a52100092fc3479d679ac961d5c22c73a835bc6` | `published_oidc_blocked` | Product commit `915ca008f851645de116993d56cacab0487b6212` passed CI; private-repository branch protection requires GitHub Pro or public visibility | GitHub source only; no Azure workload |
 
 This entry is immutable history and must not be overwritten by the replacement candidate. Read-only discovery subsequently confirmed the intended tenant/subscription and found a same-subscription backend candidate, but no suitable least-privilege R1 GitHub OIDC identity.
 
@@ -32,6 +32,7 @@ The eligible wheel is `enterprise_ml_workflow-0.1.0-py3-none-any.whl` with diges
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 0.9.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded platform PR, generated product commit, successful CI, and the GitHub-plan branch-protection blocker that stopped OIDC execution. |
 | 0.8.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded immutable platform commit, reproducible clean wheel, invalidated dirty-build candidate, and eligible replacement generation. |
 | 0.7.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded the 100-test suite and locally conformant digest-bound approval and OIDC workflow contracts before candidate publication. |
 | 0.6.0 | 2026-08-11 | 2026-08-11 | Ray Swan / Codex | Recorded live bootstrap prerequisites and clean Terraform convergence while retaining the replacement-candidate doctor and Azure ML lifecycle boundaries. |

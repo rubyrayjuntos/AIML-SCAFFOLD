@@ -67,7 +67,9 @@ No Test or Prod claim may inherit evidence from this Dev matrix.
 | Offline doctor | Passed; cloud and OIDC checks correctly reported `not_exercised` |
 | Workflow conformance | YAML parse and actionlint passed for CI, plan, apply, training, batch deployment, and OIDC smoke workflows |
 | Approval contract | `manual_dispatch_with_plan_digest`; apply consumes the reviewed artifact without replanning; independent human reviewer separation unavailable |
-| Publication state | Local candidate only; initial source push and branch protection pending |
+| Publication state | Product commit `915ca008f851645de116993d56cacab0487b6212` pushed to private `main`; initial CI run `31617441559` passed |
+| Branch protection | Failed safely with GitHub HTTP `403`: private-repository branch protection requires GitHub Pro or public visibility |
+| OIDC consequence | Stopped before dispatch because the `dev` environment admits protected branches and `main` cannot currently be protected |
 
 An earlier wheel built directly from the long-lived worktree was rejected because an ignored stale build artifact entered the wheel. It produced generation `sha256:fbcc524f7a2cd2b108dcc6e87d1dc88d802597a4e2b9bb53adf643c0958dc813`, which is permanently invalidated and was never pushed. Clean archive builds are now the evidence source.
 
@@ -164,6 +166,7 @@ No backend reuse, identity reuse, federated credential change, role assignment, 
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.3.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded generated source publication, passing GitHub CI, failed private branch-protection attempt, and deliberate stop before OIDC. |
 | 1.2.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded the reproducible clean wheel, eligible replacement generation and digests, offline validation, and invalidated contaminated local-build candidate. |
 | 1.1.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Corrected the current deployment-identity summary and recorded the locally implemented digest-bound manual approval fallback. |
 | 1.0.0 | 2026-08-11 | 2026-08-11 | Ray Swan / Codex | Recorded live bootstrap apply, independent GitHub/Entra/Azure/RBAC verification, clean second plan, and the unsupported GitHub required-reviewer release gate. |
