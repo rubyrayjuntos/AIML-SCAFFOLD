@@ -175,11 +175,15 @@ def test_local_first_terraform_omits_compute_identity_and_clusters(
     assert 'storage_account_access_type   = "Identity"' in terraform
     assert 'resource "azurerm_user_assigned_identity" "compute"' not in terraform
     assert 'resource "azurerm_role_assignment" "compute_storage"' not in terraform
-    assert 'resource "azurerm_role_assignment" "workspace_storage"' in terraform
+    # No explicit workspace-storage role assignment: the Microsoft.MachineLearningServices
+    # resource provider auto-grants the workspace's system-assigned identity Storage Blob
+    # Data Contributor on its default storage account when storage_account_access_type is
+    # "Identity"; a Terraform-managed duplicate conflicts with it (confirmed live: 409
+    # RoleAssignmentExists).
+    assert 'resource "azurerm_role_assignment" "workspace_storage"' not in terraform
     assert 'resource "azurerm_role_assignment" "workflow_storage"' in terraform
     assert "azurerm_user_assigned_identity.compute.principal_id" not in terraform
-    assert "azurerm_machine_learning_workspace.this.identity[0].principal_id" in terraform
-    assert "scope                            = azurerm_storage_account.this.id" in terraform
+    assert "scope              = azurerm_storage_account.this.id" in terraform
     assert 'resource "azurerm_machine_learning_compute_cluster"' not in terraform
     assert "workflow_evidence" not in terraform
     operational_files = [
