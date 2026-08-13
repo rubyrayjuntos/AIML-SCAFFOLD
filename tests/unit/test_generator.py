@@ -183,7 +183,13 @@ def test_local_first_terraform_omits_compute_identity_and_clusters(
     assert 'resource "azurerm_role_assignment" "workspace_storage"' not in terraform
     assert 'resource "azurerm_role_assignment" "workflow_storage"' in terraform
     assert "azurerm_user_assigned_identity.compute.principal_id" not in terraform
-    assert "scope              = azurerm_storage_account.this.id" in terraform
+    # role_definition_name (not role_definition_id via a data source) avoids a
+    # spurious replace: built-in role definition IDs resolve inconsistently
+    # between the subscription-scoped and global ARM path forms (confirmed
+    # live: replace_because_cannot_update on a real Dev plan).
+    assert 'role_definition_name = "Storage Blob Data Contributor"' in terraform
+    assert "data \"azurerm_role_definition\"" not in terraform
+    assert "scope                = azurerm_storage_account.this.id" in terraform
     assert 'resource "azurerm_machine_learning_compute_cluster"' not in terraform
     assert "workflow_evidence" not in terraform
     operational_files = [
