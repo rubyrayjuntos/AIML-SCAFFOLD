@@ -1,6 +1,6 @@
 # R1 Azure ML Dev infrastructure deployment plan
 
-> **Status:** Replacement plan reviewed; apply not authorized
+> **Status:** Clean saved plan (8 no-op, 0 changes) reviewed and independently verified; apply not authorized
 
 Generated: 2026-08-12
 
@@ -158,6 +158,50 @@ Regenerated from platform commit `ef56abc1a8af0b18c8487763ae85267b738144ec` (ADR
 
 Disposition: `saved_plan_review_passed_apply_not_authorized`.
 
+### Apply attempt and correction: 2026-08-13
+
+The owner gave deliberate, digest-bound authorization naming plan run `31655061017` attempt `1` and sanitized-JSON digest `sha256:ef68a2a1c52e4dfbfd0a907a30c7433925f06d4bfb7bc555db7cd3e4cabaf442`. Apply run [31657449816](https://github.com/rubyrayjuntos/azure-aiml-ops/actions/runs/31657449816) created `azurerm_log_analytics_workspace.this`, `azurerm_application_insights.this`, and `azurerm_key_vault.this`, then failed creating `azurerm_storage_account.this`: the AzureRM provider's post-creation data-plane readiness poll defaulted to key-based auth against an account with Shared Key correctly disabled (`403 KeyBasedAuthenticationNotPermitted`). Terraform state retained all three successful resources plus the storage account, which it marked tainted. No resource was destroyed; no automatic remediation was attempted.
+
+Root cause: the generated `provider "azurerm" {}` block lacked `storage_use_azuread = true`. Fixed in platform commit `b36beac93db570310a7ea7e920eb65e70371ceb3`. Regenerated, republished (PR #10, merge `cbc5362b20b317424424209ba3131475957deea9`), and revalidated (PR #11, merge `b4d6aaf6ff975f4ce9e6db3b78f878d7a5828d95`) through the same protected PR/CI and Azure-validation-workflow sequence as the original candidate.
+
+| Evidence | Sanitized result |
+|---|---|
+| Saved plan | Run `31659934644`, attempt `1`, source commit `b4d6aaf6ff975f4ce9e6db3b78f878d7a5828d95` |
+| Plan digests | Binary `sha256:6d228c54e8d78fa87a9da918bce7420a51110de7df5c05df1244ab334db37160`; sanitized JSON `sha256:9c190f51a377cb9ab8e0ac14210838594cf4bb33aefd4883ee86ffb2caa95a2d` |
+| Independent representation | Re-derived locally with Terraform `1.10.0` against live backend state; byte-identical sanitized JSON; `scripts/plan_artifact.py verify` passed against the live current-state snapshot |
+| Action summary | 3 no-op (`azurerm_application_insights.this`, `azurerm_key_vault.this`, `azurerm_log_analytics_workspace.this`); 5 create (`azurerm_machine_learning_workspace.this`, both role assignments, `azurerm_storage_container.evidence`, `azurerm_storage_management_policy.evidence`); 1 replace (`azurerm_storage_account.this`) |
+| Replace review | Terraform's own reason: `is tainted, so must be replaced` — a direct consequence of the prior partial-apply failure, not config drift. `name` is unchanged (`stazureaimlopscffddc57`); the account holds no data and no dependent resource was ever created against it |
+| Owner review | Reported the deviation from the "zero replacement" bar explicitly before proceeding; owner reviewed the tainted-resource explanation and authorized apply of this exact plan run/digest |
+| Apply | Run [31660270459](https://github.com/rubyrayjuntos/azure-aiml-ops/actions/runs/31660270459): the storage account destroyed and recreated cleanly, then the evidence container, lifecycle policy, and ML workspace all created successfully. Failed on two further findings (below). No resource was destroyed by this failure; the workspace and its dependencies were retained |
+
+**Second correction.** Run `31660270459` surfaced two further findings, both diagnosed from live logs and role-assignment queries before any further action:
+
+1. `azurerm_role_assignment.workspace_storage` failed with `409 RoleAssignmentExists`. Confirmed live (`az role assignment list` on the storage account) that `Microsoft.MachineLearningServices` auto-grants the workspace's system-assigned identity `Storage Blob Data Contributor` (and `Storage File Data Privileged Contributor`) on its default storage account whenever `storage_account_access_type` is `"Identity"`. The explicit Terraform-managed role assignment for the same principal/role/scope was redundant and conflicted with the auto-provisioned one.
+2. Evidence recording failed with `AuthorizationPermissionMismatch` roughly 10 seconds after the `workflow_storage` role assignment was created — an RBAC propagation-delay race, not a real permission gap.
+
+Fixed in platform commit `ad90be40efe1c9b530c8a2de733e591795b669d9`: removed the redundant role assignment and its output; added retry-with-backoff (5/10/20/40/40s) to the evidence blob write. Regenerated, republished (PR #12, merge `02ddc69e43486556d826652a0aec60e3c1c7f587`), and revalidated (PR #13, merge `ae9e185f19a22c7fe5834df4271ba62b36c97c3f`).
+
+| Evidence | Sanitized result |
+|---|---|
+| Saved plan | Run `31661241595`, attempt `1`, source commit `ae9e185f19a22c7fe5834df4271ba62b36c97c3f` |
+| Action summary | 7 no-op; 1 replace (`azurerm_role_assignment.workflow_storage`, `replace_because_cannot_update`) |
+| Replace review | `role_definition_id` recorded at creation used the subscription-scoped ARM path; `data.azurerm_role_definition` resolved the same built-in role to the global path on this plan — same role, different immutable path string, not config drift |
+| Owner review | Reported as lower-risk than the storage-account replace (role assignment recreation has no functional effect); owner recommended fixing before another apply rather than accepting a recurring replace |
+| Apply | Not dispatched; fixed instead (below) |
+
+**Third correction.** Fixed in platform commit `051432a904fc455925af641fc1e155b1dd8cfb66`: removed the `data "azurerm_role_definition" "blob_contributor"` data source entirely and switched both role assignments to `role_definition_name = "Storage Blob Data Contributor"`, sidestepping the ARM path-format ambiguity. Verified the rendered Terraform is byte-identical to `terraform fmt`'s output before publishing. Regenerated, republished (PR #14, merge `fb103f23d88b3c828cc48ab4093f85d9b3d085c9`), and revalidated (PR #15, merge `708c79a310de4f126148488431618e18bd038beb`).
+
+| Evidence | Sanitized result |
+|---|---|
+| Saved plan | Run `31662465677`, attempt `1`, source commit `708c79a310de4f126148488431618e18bd038beb` |
+| Plan digests | Binary `sha256:99eb564ce4c745f0393e937696aa8f5f1356b9a28233d8edf6a047c3cb6aff38`; sanitized JSON `sha256:bf01ba976627f5d80475813b63e1b3d1aefe81e9ae4afc21b12df517a95acd87` |
+| Independent representation | Re-derived locally with Terraform `1.10.0` against live backend state; byte-identical sanitized JSON; `scripts/plan_artifact.py verify` passed against the live current-state snapshot |
+| Action summary | **8 no-op; 0 create, replace, update, or delete** |
+| State binding | Backend lineage `6ee99d75-b936-96fd-17d6-da83ebe82ed7`, serial `6`, unchanged since the second apply attempt |
+| Apply | Not dispatched; awaiting owner authorization |
+
+Disposition: `saved_plan_review_passed_apply_not_authorized` (fully clean).
+
 ## 8. Validation proof
 
 The approved Azure validation workflow executed locally and with authenticated read-only Azure access. Terraform planning, state locking/writes, apply, and Azure ML workload operations were deliberately not exercised.
@@ -219,19 +263,21 @@ Failed deployment retains state, GitHub evidence, and any project-local evidence
 
 ## 11. Next steps
 
-Current phase: the local-first compute regeneration is published, validated, and has a reviewed, independently-verified saved Terraform plan (9 creates; 0 updates/replacements/deletes). Terraform apply and all Azure ML workload execution remain incomplete and unauthorized.
+Current phase: after two apply attempts and three corrections (storage data-plane auth, redundant workspace RBAC plus evidence-write retry, and role-definition-ID stability), the R1 Dev workload is live except for one no-op-clean saved plan away from full convergence. All eight declared resources (Log Analytics, Application Insights, Key Vault, storage account, evidence container, evidence lifecycle policy, ML workspace, workflow role assignment) exist, are correctly configured, and the latest saved plan (run `31662465677`) shows **8 no-op, 0 create/replace/update/delete** — independently re-derived and verified against live state. Terraform apply of this specific plan and all Azure ML workload execution remain unauthorized.
 
 1. ~~Implement and statically validate the local-first compute contract.~~ Done.
-2. ~~Publish through protected platform and product PR/CI and regenerate deterministically.~~ Done (PR #8).
-3. ~~Produce and review a replacement saved plan from protected product `main`.~~ Done (run `31655061017`).
-4. Obtain deliberate, digest-bound owner authorization naming plan run `31655061017` attempt `1` and sanitized-JSON digest `sha256:ef68a2a1c52e4dfbfd0a907a30c7433925f06d4bfb7bc555db7cd3e4cabaf442`.
-5. Dispatch `terraform-apply` with that run ID and digest; it must fail closed if any digest, identity, or state-lineage/serial value differs at apply time.
-6. After apply, run the authenticated doctor again and begin the separately-gated Azure ML training/registration/challenger/redeploy/monitoring evidence sequence — none of that is authorized by this plan.
+2. ~~Publish through protected platform and product PR/CI and regenerate deterministically.~~ Done.
+3. ~~Produce and review a saved Terraform plan from protected product `main`.~~ Done (run `31662465677`, fourth candidate).
+4. ~~Correct every finding surfaced by live apply attempts rather than leaving a known-recurring defect.~~ Done (three corrections, each republished and revalidated).
+5. Obtain deliberate, digest-bound owner authorization naming plan run `31662465677` attempt `1` and sanitized-JSON digest `sha256:bf01ba976627f5d80475813b63e1b3d1aefe81e9ae4afc21b12df517a95acd87`.
+6. Dispatch `terraform-apply` with that run ID and digest; expect a fast no-op confirmation, not new resource creation.
+7. After apply, run the authenticated doctor again and begin the separately-gated Azure ML training/registration/challenger/redeploy/monitoring evidence sequence — none of that is authorized by this plan.
 
 ## Documentation changelog
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 2.3.0 | 2026-08-13 | 2026-08-13 | Ray Swan / Claude | Applied run 31655061017 (owner-authorized): 3 of 9 resources created, then failed on storage data-plane auth. Diagnosed and fixed (storage_use_azuread); reapplied and failed again on redundant workspace RBAC plus an evidence-write RBAC-propagation race; diagnosed and fixed both (removed the redundant role assignment, added retry/backoff). A third finding — a spurious role-assignment replace from ARM role-definition-ID path-format ambiguity — was fixed before any further apply (role_definition_name). Final saved plan `31662465677` independently re-verified as 8 no-op, 0 changes. All 8 resources now live and correctly configured; apply of the clean plan remains unauthorized. |
 | 2.2.0 | 2026-08-12 | 2026-08-13 | Ray Swan / Claude | Published the local-first regeneration and Azure validation workflow evidence through PRs #8/#9, produced saved Terraform plan `31655061017` (9 creates, 0 updates/replacements/deletes), and independently re-derived and verified the sanitized plan JSON with a locally-downloaded Terraform 1.10.0 against the live backend. Apply remains unauthorized. |
 | 2.1.0 | 2026-08-12 | 2026-08-12 | Ray Swan / Codex | Completed local factory integration and advanced the owner-approved compute-policy change to Ready for Validation after 119 platform tests, deterministic generation, local/cloud generated conformance, Terraform validation, and local lifecycle proof. |
 | 2.0.0 | 2026-08-12 | 2026-08-12 | Ray Swan / Codex | Reopened the plan for the authorized local-first compute-policy redesign; removed implicit SKU and four-node Dev defaults, made cloud training and batch independent opt-ins, and retained separate apply and charged-compute gates. |
