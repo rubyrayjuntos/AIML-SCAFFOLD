@@ -283,7 +283,7 @@ Current phase: R1 Dev infrastructure apply is complete. After two apply attempts
 3. ~~Produce and review a saved Terraform plan from protected product `main`.~~ Done (run `31662465677`, fourth candidate, 8 no-op / 0 changes).
 4. ~~Correct every finding surfaced by live apply attempts rather than leaving a known-recurring defect.~~ Done (three corrections, each republished and revalidated).
 5. ~~Obtain deliberate, digest-bound owner authorization and apply the clean plan.~~ Done (run `31663570921`, `outcome: success`).
-6. Run the authenticated doctor once more against the applied infrastructure to close the loop on `backend_state_write_and_lock` and other apply-dependent checks.
+6. ~~Run the authenticated doctor once more against the applied infrastructure.~~ Done, 2026-08-13. `overall_status: warning`, same single expected `active_identity_match` warning as every prior run. `backend_state_write_and_lock` and `oidc_token_exchange` remain `not_exercised` by the doctor tool itself (both require a live write/OIDC-issuing context the read-only CLI cannot create) but both are independently proven by the apply run's own success: `31663570921` performed a real state write/lock (serial 6 → 7) and every workflow this session authenticated via real OIDC token exchange to `azure/login`.
 7. Begin the separately-gated Azure ML workload evidence sequence: training, evaluation, immutable model registration, declared retraining dataset, winning/losing challenger branches, conditional batch redeployment, and production-monitoring proof. None of that is authorized by this plan — each step needs its own explicit authorization, matching the R1 Dev clean-room evidence matrix.
 
 ## Documentation changelog
