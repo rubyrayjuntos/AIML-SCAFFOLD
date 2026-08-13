@@ -1,6 +1,6 @@
 # R1 Azure ML Dev infrastructure deployment plan
 
-> **Status:** Clean saved plan (8 no-op, 0 changes) reviewed and independently verified; apply not authorized
+> **Status:** R1 Dev infrastructure apply complete (8 resources); Azure ML workload lifecycle remains unexercised
 
 Generated: 2026-08-12
 
@@ -200,7 +200,18 @@ Fixed in platform commit `ad90be40efe1c9b530c8a2de733e591795b669d9`: removed the
 | State binding | Backend lineage `6ee99d75-b936-96fd-17d6-da83ebe82ed7`, serial `6`, unchanged since the second apply attempt |
 | Apply | Not dispatched; awaiting owner authorization |
 
-Disposition: `saved_plan_review_passed_apply_not_authorized` (fully clean).
+**Apply.** Owner gave deliberate, digest-bound authorization naming plan run `31662465677` attempt `1` and sanitized-JSON digest `sha256:bf01ba976627f5d80475813b63e1b3d1aefe81e9ae4afc21b12df517a95acd87` via direct instruction on 2026-08-13. Dispatched as run [31663570921](https://github.com/rubyrayjuntos/azure-aiml-ops/actions/runs/31663570921).
+
+| Evidence | Sanitized result |
+|---|---|
+| Outcome | `success`; every step passed, including `Verify applied identity and RBAC graph` and `Record infrastructure evidence` — both of which failed on every prior attempt and ran clean for the first time here |
+| Duration | Started `2026-08-13T03:19:46Z`, completed `2026-08-13T03:19:59Z` — a 13-second no-op apply, consistent with the plan's own 8-no-op/0-change summary |
+| Post-apply state | `terraform state pull`: serial `7`, same lineage `6ee99d75-b936-96fd-17d6-da83ebe82ed7`; 8 tracked resources, no taint, no orphaned data source |
+| Identity/RBAC verification | Workspace principal ID matched the live ARM resource (`afa3648e-6b75-4394-ae9a-f290813a6946`); workflow role assignment confirmed unique `Storage Blob Data Contributor` at the storage scope; workspace resource-group `Azure AI Administrator` assignment confirmed |
+| Evidence recording | `emit_evidence.py` succeeded (retry/backoff not needed this time — no fresh role assignment in this apply to race against); local re-verification blocked by 403 under the operator's own identity, which correctly has no RBAC on the project storage account (only the workflow and workspace identities do) — this is the intended least-privilege posture, not a gap |
+| Authorization record | `apply-authorization-and-result.json`: `authorized_by: rubyrayjuntos`, `outcome: success`, full digest/commit/generation-ID chain intact |
+
+Disposition: `apply_succeeded`. R1 Dev now has a live Azure ML workspace, identity-based storage, evidence pipeline, Key Vault, and observability stack. Azure ML training, evaluation, model registration, challenger/champion promotion, batch endpoint deployment, and monitoring remain entirely unexercised and unauthorized by this plan — that is the next, separately-gated phase.
 
 ## 8. Validation proof
 
@@ -263,20 +274,21 @@ Failed deployment retains state, GitHub evidence, and any project-local evidence
 
 ## 11. Next steps
 
-Current phase: after two apply attempts and three corrections (storage data-plane auth, redundant workspace RBAC plus evidence-write retry, and role-definition-ID stability), the R1 Dev workload is live except for one no-op-clean saved plan away from full convergence. All eight declared resources (Log Analytics, Application Insights, Key Vault, storage account, evidence container, evidence lifecycle policy, ML workspace, workflow role assignment) exist, are correctly configured, and the latest saved plan (run `31662465677`) shows **8 no-op, 0 create/replace/update/delete** — independently re-derived and verified against live state. Terraform apply of this specific plan and all Azure ML workload execution remain unauthorized.
+Current phase: R1 Dev infrastructure apply is complete. After two apply attempts and three diagnosed-and-fixed findings (storage data-plane auth, redundant workspace RBAC plus an evidence-write RBAC-propagation race, and role-definition-ID path-format instability), apply run `31663570921` succeeded end to end — including the identity/RBAC verification and evidence-recording steps that failed on every prior attempt. All 8 resources (Log Analytics, Application Insights, Key Vault, storage account, evidence container, evidence lifecycle policy, ML workspace, workflow role assignment) are live and correctly configured. Azure ML training, evaluation, model registration, challenger/champion promotion, batch endpoint deployment, and monitoring remain entirely unexercised.
 
 1. ~~Implement and statically validate the local-first compute contract.~~ Done.
 2. ~~Publish through protected platform and product PR/CI and regenerate deterministically.~~ Done.
-3. ~~Produce and review a saved Terraform plan from protected product `main`.~~ Done (run `31662465677`, fourth candidate).
+3. ~~Produce and review a saved Terraform plan from protected product `main`.~~ Done (run `31662465677`, fourth candidate, 8 no-op / 0 changes).
 4. ~~Correct every finding surfaced by live apply attempts rather than leaving a known-recurring defect.~~ Done (three corrections, each republished and revalidated).
-5. Obtain deliberate, digest-bound owner authorization naming plan run `31662465677` attempt `1` and sanitized-JSON digest `sha256:bf01ba976627f5d80475813b63e1b3d1aefe81e9ae4afc21b12df517a95acd87`.
-6. Dispatch `terraform-apply` with that run ID and digest; expect a fast no-op confirmation, not new resource creation.
-7. After apply, run the authenticated doctor again and begin the separately-gated Azure ML training/registration/challenger/redeploy/monitoring evidence sequence — none of that is authorized by this plan.
+5. ~~Obtain deliberate, digest-bound owner authorization and apply the clean plan.~~ Done (run `31663570921`, `outcome: success`).
+6. Run the authenticated doctor once more against the applied infrastructure to close the loop on `backend_state_write_and_lock` and other apply-dependent checks.
+7. Begin the separately-gated Azure ML workload evidence sequence: training, evaluation, immutable model registration, declared retraining dataset, winning/losing challenger branches, conditional batch redeployment, and production-monitoring proof. None of that is authorized by this plan — each step needs its own explicit authorization, matching the R1 Dev clean-room evidence matrix.
 
 ## Documentation changelog
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 2.4.0 | 2026-08-13 | 2026-08-13 | Ray Swan / Claude | Applied the clean saved plan (run `31662465677`, owner-authorized). Apply run `31663570921` succeeded end to end in 13 seconds (8 no-op, 0 changes), including the identity/RBAC verification and evidence-recording steps that failed on every prior attempt. R1 Dev infrastructure (Log Analytics, Application Insights, Key Vault, storage account with identity-based access, evidence container and lifecycle policy, ML workspace, workflow RBAC) is now live. Azure ML workload lifecycle (training/registration/challenger/redeploy/monitoring) remains entirely unexercised and separately gated. |
 | 2.3.0 | 2026-08-13 | 2026-08-13 | Ray Swan / Claude | Applied run 31655061017 (owner-authorized): 3 of 9 resources created, then failed on storage data-plane auth. Diagnosed and fixed (storage_use_azuread); reapplied and failed again on redundant workspace RBAC plus an evidence-write RBAC-propagation race; diagnosed and fixed both (removed the redundant role assignment, added retry/backoff). A third finding — a spurious role-assignment replace from ARM role-definition-ID path-format ambiguity — was fixed before any further apply (role_definition_name). Final saved plan `31662465677` independently re-verified as 8 no-op, 0 changes. All 8 resources now live and correctly configured; apply of the clean plan remains unauthorized. |
 | 2.2.0 | 2026-08-12 | 2026-08-13 | Ray Swan / Claude | Published the local-first regeneration and Azure validation workflow evidence through PRs #8/#9, produced saved Terraform plan `31655061017` (9 creates, 0 updates/replacements/deletes), and independently re-derived and verified the sanitized plan JSON with a locally-downloaded Terraform 1.10.0 against the live backend. Apply remains unauthorized. |
 | 2.1.0 | 2026-08-12 | 2026-08-12 | Ray Swan / Codex | Completed local factory integration and advanced the owner-approved compute-policy change to Ready for Validation after 119 platform tests, deterministic generation, local/cloud generated conformance, Terraform validation, and local lifecycle proof. |
