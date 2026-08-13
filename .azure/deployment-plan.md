@@ -1,6 +1,6 @@
 # R1 Azure ML Dev infrastructure deployment plan
 
-> **Status:** Ready for Validation
+> **Status:** Replacement plan reviewed; apply not authorized
 
 Generated: 2026-08-12
 
@@ -128,13 +128,35 @@ The prior quota evidence is historical evidence for the rejected `Standard_D4s_v
 ### Phase 4: Replacement saved-plan gate
 
 - [x] Record run `31632608556` as `superseded_before_apply`, mandatory deployment-governance artifact absent, no resources mutated.
-- [ ] Retire the unpublished compute-bound generation `sha256:54b4af8c...d7b6c0` as blocked before publication because its implicit SKU was unavailable.
-- [ ] Produce a new saved Terraform plan from protected product `main` only.
-- [ ] Derive and review the exact create count from the replacement local-first Terraform graph; require zero update, replacement, or destroy actions.
-- [ ] Reproduce the sanitized JSON with Terraform 1.10.0.
-- [ ] Rebind and recheck backend identity plus state lineage, serial, and content digest.
+- [x] Retire the unpublished compute-bound generation `sha256:54b4af8c...d7b6c0` as blocked before publication because its implicit SKU was unavailable.
+- [x] Produce a new saved Terraform plan from protected product `main` only.
+- [x] Derive and review the exact create count from the replacement local-first Terraform graph; require zero update, replacement, or destroy actions.
+- [x] Reproduce the sanitized JSON with Terraform 1.10.0.
+- [x] Rebind and recheck backend identity plus state lineage, serial, and content digest.
 - [ ] Request new deliberate, digest-bound owner authorization.
-- [ ] Stop before apply.
+- [x] Stop before apply.
+
+### Phase 4 result: 2026-08-13
+
+Regenerated from platform commit `ef56abc1a8af0b18c8487763ae85267b738144ec` (ADR 0010 local-first compute). Two independent clean-room platform wheel builds matched (`sha256:a107e628d415c1281a194f7dba86dbc200ae126c180a59b67bfa372ea092248f`, reproducible only after pinning `SOURCE_DATE_EPOCH` to the commit timestamp — `setuptools`/`wheel` otherwise embed wall-clock build time in `dist-info` and break byte-for-byte reproducibility). Two independent `aiml-scaffold generate` runs matched (`generated_files_digest sha256:e3f14de3bd67f1384c185e6f3432df4721f835dc3cb9c99f6b11eef475ee9a82`; `manifest_digest sha256:c01e4c7a6434584cbbebd1fac2ae2f2b92de9854d98d4f6322d1b2e944f8945d`, confirmed identical to the last real R1 candidate's manifest digest, independently corroborating the reconstructed manifest).
+
+| Evidence | Sanitized result |
+|---|---|
+| Product publication | PR `rubyrayjuntos/azure-aiml-ops#8` (regeneration), merge commit `4c422adf6d7cc50cf92c206f7873a7e950389176`; PR CI `31647605675` and post-merge CI `31654411635` passed |
+| Governance publication | PR `rubyrayjuntos/azure-aiml-ops#9` (Azure validation workflow evidence, status set to `Validated`), merge commit `432663a9f0db85cece92db6e9bebb22acf5f5e59`; PR CI `31654848431` and post-merge CI `31654969743` passed |
+| Authenticated doctor | `overall_status: warning`; every check passed except `active_identity_match` (active identity is the operator's user, not the GitHub deployment identity — expected, not a failure); compute SKU/quota checks are `not_applicable` because the local-first profile requests zero Azure compute |
+| First plan attempt | Run `31654533527` failed fast and safely: `plan artifact validation failed: deployment plan status is not Validated` — the generated `.azure/deployment-plan.md` intentionally starts at `Planning`; no plan or apply occurred |
+| Saved plan | Run `31655061017`, attempt `1`, source commit `432663a9f0db85cece92db6e9bebb22acf5f5e59`; exact six-file artifact `terraform-plan-dev-31655061017-1` |
+| Plan digests | Binary `sha256:e87c41525a021d528169abd96456975fa6424b8018c4a8cc9a72a500aaf9a998`; sanitized JSON `sha256:ef68a2a1c52e4dfbfd0a907a30c7433925f06d4bfb7bc555db7cd3e4cabaf442` |
+| Independent representation | Downloaded the artifact locally; initialized Terraform `1.10.0` against the live backend under the operator's own Entra identity; `terraform show -json` plus the platform's own `_sanitize` function re-derived a byte-identical sanitized JSON; `scripts/plan_artifact.py verify` passed against the live current-state snapshot |
+| State binding | Backend lineage `6ee99d75-b936-96fd-17d6-da83ebe82ed7`, serial `1`, empty state (no prior R1 apply); matched the plan's recorded pre-plan snapshot |
+| Action summary | 9 creates; 0 updates, replacements, deletes, reads, or no-ops — `azurerm_application_insights.this`, `azurerm_key_vault.this`, `azurerm_log_analytics_workspace.this`, `azurerm_machine_learning_workspace.this`, `azurerm_role_assignment.workflow_storage`, `azurerm_role_assignment.workspace_storage`, `azurerm_storage_account.this`, `azurerm_storage_container.evidence`, `azurerm_storage_management_policy.evidence` |
+| Identity and RBAC | Workspace `SystemAssigned`; default storage access `Identity`; both role assignments grant `Storage Blob Data Contributor` scoped to the project storage account only; no Owner, no subscription-level scope, no unrelated role; no compute UAMI (local-first profile requests zero Azure compute) |
+| Storage posture | `shared_access_key_enabled: false`; `public_network_access_enabled: true` (known Dev-only posture; production private-network conformance is out of scope) |
+| Boundary review | No bootstrap resource, subscription Owner, ACR, endpoint, Bicep resource, or resource-group overlap; all resources target `rg-azure-ai-ml-ops-dev` |
+| Apply | Not dispatched and not authorized |
+
+Disposition: `saved_plan_review_passed_apply_not_authorized`.
 
 ## 8. Validation proof
 
@@ -197,17 +219,20 @@ Failed deployment retains state, GitHub evidence, and any project-local evidence
 
 ## 11. Next steps
 
-Current phase: the compute-policy change is owner-authorized and approved for implementation; validation, publication, replacement planning, Terraform apply, and Azure ML workload execution remain incomplete.
+Current phase: the local-first compute regeneration is published, validated, and has a reviewed, independently-verified saved Terraform plan (9 creates; 0 updates/replacements/deletes). Terraform apply and all Azure ML workload execution remain incomplete and unauthorized.
 
-1. Implement and statically validate the local-first compute contract.
-2. Publish through protected platform and product PR/CI and regenerate deterministically.
-3. Produce and review a replacement saved plan from protected product `main`.
-4. Stop before Terraform apply or any charged Azure ML compute operation.
+1. ~~Implement and statically validate the local-first compute contract.~~ Done.
+2. ~~Publish through protected platform and product PR/CI and regenerate deterministically.~~ Done (PR #8).
+3. ~~Produce and review a replacement saved plan from protected product `main`.~~ Done (run `31655061017`).
+4. Obtain deliberate, digest-bound owner authorization naming plan run `31655061017` attempt `1` and sanitized-JSON digest `sha256:ef68a2a1c52e4dfbfd0a907a30c7433925f06d4bfb7bc555db7cd3e4cabaf442`.
+5. Dispatch `terraform-apply` with that run ID and digest; it must fail closed if any digest, identity, or state-lineage/serial value differs at apply time.
+6. After apply, run the authenticated doctor again and begin the separately-gated Azure ML training/registration/challenger/redeploy/monitoring evidence sequence — none of that is authorized by this plan.
 
 ## Documentation changelog
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 2.2.0 | 2026-08-12 | 2026-08-13 | Ray Swan / Claude | Published the local-first regeneration and Azure validation workflow evidence through PRs #8/#9, produced saved Terraform plan `31655061017` (9 creates, 0 updates/replacements/deletes), and independently re-derived and verified the sanitized plan JSON with a locally-downloaded Terraform 1.10.0 against the live backend. Apply remains unauthorized. |
 | 2.1.0 | 2026-08-12 | 2026-08-12 | Ray Swan / Codex | Completed local factory integration and advanced the owner-approved compute-policy change to Ready for Validation after 119 platform tests, deterministic generation, local/cloud generated conformance, Terraform validation, and local lifecycle proof. |
 | 2.0.0 | 2026-08-12 | 2026-08-12 | Ray Swan / Codex | Reopened the plan for the authorized local-first compute-policy redesign; removed implicit SKU and four-node Dev defaults, made cloud training and batch independent opt-ins, and retained separate apply and charged-compute gates. |
 | 1.9.0 | 2026-08-12 | 2026-08-12 | Ray Swan / Codex | Repeated platform validation successfully at 112 tests after making SKU discovery subscription-restriction-aware; product planning remains stopped. |
