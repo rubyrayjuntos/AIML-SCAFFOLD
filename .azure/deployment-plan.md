@@ -284,6 +284,22 @@ Current phase: R1 Dev infrastructure apply is complete. After two apply attempts
 4. ~~Correct every finding surfaced by live apply attempts rather than leaving a known-recurring defect.~~ Done (three corrections, each republished and revalidated).
 5. ~~Obtain deliberate, digest-bound owner authorization and apply the clean plan.~~ Done (run `31663570921`, `outcome: success`).
 6. ~~Run the authenticated doctor once more against the applied infrastructure.~~ Done, 2026-08-13. `overall_status: warning`, same single expected `active_identity_match` warning as every prior run. `backend_state_write_and_lock` and `oidc_token_exchange` remain `not_exercised` by the doctor tool itself (both require a live write/OIDC-issuing context the read-only CLI cannot create) but both are independently proven by the apply run's own success: `31663570921` performed a real state write/lock (serial 6 → 7) and every workflow this session authenticated via real OIDC token exchange to `azure/login`.
+
+### Gate 1 workload evidence: paused on quota, 2026-08-13
+
+Owner authorized the full Gate 1 sequence (healthy training run, immutable registration, losing challenger, winning challenger, conditional batch redeployment, invocation, monitoring/drift proof) in one pass. Before spending anything, checked live SKU availability the same way `doctor`'s `compute_sku_availability` check does: `az vm list-skus --location <region> --size <sku> --all --subscription 5b452321-32fd-4b1c-8bbf-6d69a5a587ad --output json`.
+
+| Evidence | Sanitized result |
+|---|---|
+| SKUs checked | `Standard_D4s_v5`, `Standard_DS3_v2`, `Standard_D2s_v3`, `Standard_D2s_v5`, `Standard_F2s_v2`, `Standard_DS2_v2` |
+| Regions checked | `eastus`, `eastus2` |
+| Result | All 6 SKUs restricted in both regions checked, reason `NotAvailableForSubscription` (both `Location` and `Zone` restriction entries) |
+| Quota confirmation | `az vm list-usage --location eastus`: `Dedicated vCPUs` shows `0` current / **`0` limit** — a hard zero ceiling, distinct from and gating underneath the healthy-looking per-family quotas (e.g. `Standard D Family vCPUs: 0/65`) that never actually become usable while the dedicated ceiling is zero |
+| Low-priority headroom | `Total Regional Low-priority vCPUs: 0/3` shows nonzero limit, but `NotAvailableForSubscription` restrictions apply at the SKU/location level in the ARM compute-provider catalog and are not tier-specific, so a spot/low-priority allocation of the same restricted SKUs is expected to fail identically — not attempted live, since the owner chose to pause rather than spend a cycle confirming a near-certain failure |
+| Relationship to prior evidence | Matches the R1 Dev evidence matrix's `2026-08-12T20:58:00Z` finding (`Standard_D4s_v5` restricted in East US) that originally motivated the local-first pivot (ADR 0010). This is the same subscription-level restriction, not a template or SKU-choice defect — confirmed here across five additional SKUs and a second region |
+| Owner decision | Pause Gate 1 until Azure lifts the Dedicated vCPU restriction (support request required) or a subscription without this restriction is available. No manifest change, plan, or apply was attempted for cloud compute; the applied R1 Dev infrastructure (8 resources, local-first) is unaffected and remains exactly as recorded above |
+
+**What resolves this:** a Microsoft support request for a Dedicated vCPU quota increase on subscription `5b452321-32fd-4b1c-8bbf-6d69a5a587ad` in `eastus` (or another target region) — Azure Portal → Support + troubleshooting → New support request → Service and subscription limits (quotas) → quota type "Compute-VM (cores-vCPUs) subscription limit increases". Given the local-first policy's own `max_instances: 1` ceiling, a minimal request (a handful of vCPUs in one small family, e.g. `Standard D Family` or `DSv3 Family`) should be sufficient to unblock Gate 1 — no need to request the full 65-vCPU family ceiling already nominally allowed.
 7. Begin the separately-gated Azure ML workload evidence sequence: training, evaluation, immutable model registration, declared retraining dataset, winning/losing challenger branches, conditional batch redeployment, and production-monitoring proof. None of that is authorized by this plan — each step needs its own explicit authorization, matching the R1 Dev clean-room evidence matrix.
 
 ## Documentation changelog
