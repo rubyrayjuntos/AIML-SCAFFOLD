@@ -300,6 +300,31 @@ Owner authorized the full Gate 1 sequence (healthy training run, immutable regis
 | Owner decision | Pause Gate 1 until Azure lifts the Dedicated vCPU restriction (support request required) or a subscription without this restriction is available. No manifest change, plan, or apply was attempted for cloud compute; the applied R1 Dev infrastructure (8 resources, local-first) is unaffected and remains exactly as recorded above |
 
 **What resolves this:** a Microsoft support request for a Dedicated vCPU quota increase on subscription `5b452321-32fd-4b1c-8bbf-6d69a5a587ad` in `eastus` (or another target region) — Azure Portal → Support + troubleshooting → New support request → Service and subscription limits (quotas) → quota type "Compute-VM (cores-vCPUs) subscription limit increases". Given the local-first policy's own `max_instances: 1` ceiling, a minimal request (a handful of vCPUs in one small family, e.g. `Standard D Family` or `DSv3 Family`) should be sufficient to unblock Gate 1 — no need to request the full 65-vCPU family ceiling already nominally allowed.
+
+### Gate 1 workload evidence: resumed, 2026-08-14
+
+Owner submitted a quota-increase support request (case `2608140040007160`) via the Azure Portal self-service flow. Microsoft's response: approved, `Total Regional vCPUs` raised `65` → `73` in `eastus`. Before assuming this resolved the blocker, verified directly rather than taking the approval email at face value.
+
+| Evidence | Sanitized result |
+|---|---|
+| Quota after approval | `az vm list-usage --location eastus`: `Total Regional vCPUs` now `0/73` (was `0/65`); **`Dedicated vCPUs` unchanged at `0/0`** |
+| SKU catalog re-check | `az vm list-skus --location eastus --size Standard_D2s_v3 --all`: still `NotAvailableForSubscription`, identical restriction entries to before the approval |
+| Ad-hoc cluster-definition test | `az ml compute create` (dedicated tier, `min_instances=0`) against the live R1 Dev workspace **succeeded** — contradicts the SKU catalog result |
+| Ad-hoc node-allocation test | Submitted a real job to force node allocation. Failed, but inconclusively: `targetNodeCount` stayed `0` (never attempted VM allocation) and the job failed at artifact-upload time with `AuthorizationPermissionMismatch` — the testing identity (operator's own Entra user) has no storage RBAC on the project account, by design (least-privilege). This test produced no evidence about compute quota either way, and both ad-hoc test resources were deleted after |
+| Owner decision | Two static signals disagree (SKU catalog: still blocked; cluster-definition creation: now succeeds) and ad-hoc CLI testing can't resolve it cleanly, since the operator identity deliberately lacks the RBAC needed to run a real job. Rather than a third ad-hoc test with temporarily-elevated permissions (rejected, to avoid a permissions change outside the reviewed pipeline), owner authorized resuming Gate 1 through the actual reviewed pipeline: enable cloud compute in the manifest, full plan/apply/dispatch cycle, using the deployment identity that already has correct RBAC from the Terraform build |
+
+**Regeneration.** Manifest-only change (no platform code change; reused platform commit `051432a904fc455925af641fc1e155b1dd8cfb66`, wheel `sha256:c8a73fac24186f987c7b9341a0068645c85ba1dd828ea26100eb3af26a14704b`). Enabled `execution.training`/`execution.batch` cloud fallback: `Standard_D2s_v3`, dedicated tier, scale-to-zero, max 1 node each. Published (PR #16, merge `2783ff79c0ca9840c704a3f431c4a5dae6a83c9c`) and validated (PR #17, merge `a6dd16cb5293cd913500e922b57e997645cc5e19`) through the same protected PR/CI and Azure-validation-workflow sequence as every prior candidate — this time with one check left honestly failing rather than waived, since it's the exact thing under test.
+
+| Evidence | Sanitized result |
+|---|---|
+| Authenticated doctor | `overall_status: failed` — `compute_sku_availability` and `compute_quota_sufficiency` both fail (same `NotAvailableForSubscription` result as the direct CLI check); every other check passed, including the expected `active_identity_match` warning |
+| Saved plan | Run `31839827041`, attempt `1`, source commit `a6dd16cb5293cd913500e922b57e997645cc5e19` |
+| Plan digests | Binary `sha256:eeb608bcc0778ecb30d2b815081c89635a7c0f118c3e3846008807d825bc93a7`; sanitized JSON `sha256:f55dd6239ac5292c2f226511a8ddf7de759b6d506fa5a6840a6c209b7d68acea` |
+| Independent representation | Re-derived locally with Terraform `1.10.0` against live backend state; byte-identical sanitized JSON; `scripts/plan_artifact.py verify` passed against the live current-state snapshot |
+| Action summary | 8 no-op (all previously-applied resources unchanged); 4 create: `azurerm_user_assigned_identity.compute`, `azurerm_role_assignment.compute_storage` (`Storage Blob Data Contributor` by name, scoped to the project storage account), `azurerm_machine_learning_compute_cluster.training`, `azurerm_machine_learning_compute_cluster.batch` |
+| Apply | Not dispatched; awaiting owner authorization. This plan is expected to either (a) apply cleanly, proving the quota fix actually works for cluster *creation* — matching the ad-hoc test — or (b) fail at apply time on VM provisioning, matching the SKU catalog. Either outcome is real evidence; the subsequent `train.yml` dispatch against real workspace RBAC is what actually answers whether a node can run a job |
+
+Disposition: `saved_plan_review_passed_apply_not_authorized`.
 7. Begin the separately-gated Azure ML workload evidence sequence: training, evaluation, immutable model registration, declared retraining dataset, winning/losing challenger branches, conditional batch redeployment, and production-monitoring proof. None of that is authorized by this plan — each step needs its own explicit authorization, matching the R1 Dev clean-room evidence matrix.
 
 ## Documentation changelog
