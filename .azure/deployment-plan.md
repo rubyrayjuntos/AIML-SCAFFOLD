@@ -334,6 +334,24 @@ Owner submitted a quota-increase support request (case `2608140040007160`) via t
 | Significance | **The approved quota increase (`Total Regional vCPUs` 65→73) does unblock real cluster provisioning through the reviewed pipeline**, resolving the disagreement between the SKU catalog check (still says restricted) and the earlier ad-hoc test (said it worked) in favor of the ad-hoc result. Cluster *creation* succeeding is not yet proof a node can actually run a job — that is the next, separate test (dispatching `train.yml`) |
 
 Disposition: `apply_succeeded`. Compute infrastructure for cloud training and batch is live. Whether a node can actually be allocated and run a job remains untested until a real job is dispatched through the workflow.
+
+### First real training dispatch: failed on an unrelated CLI bug, 2026-08-14
+
+Dispatched `train.yml` (run [31841361358](https://github.com/rubyrayjuntos/azure-aiml-ops/actions/runs/31841361358)) — the actual, conclusive quota test. It failed, but three steps in, before ever reaching compute: `az ml workspace show -g ... -w ...` errored with `the following arguments are required: --name/-n`. `az ml workspace show` identifies the workspace resource itself by `--name/-n`; `--workspace-name/-w` is for commands that operate *inside* a named workspace (job create, compute list) — a different flag with a similar-looking meaning. Job submission (step 10) never ran; `targetNodeCount` stayed `0` on the cluster throughout. No evidence about the quota question either way.
+
+Fixed in platform commit `00e3eb260e710cdf84052929a0ce834236db5fc9` (both `train.yml.j2` and `deploy-batch.yml.j2`). Published (PR #18, merge `edf8f094568a38fc8b3b993dcb00ece0840fa1fa`) and validated (PR #19, merge `71c21e7910258ad7b7078da2105ea9567c1ce1bf`).
+
+The resulting plan (run `31843274148`) was independently verified but was **not** the expected clean no-op: 10 no-op, 2 update. Both compute clusters showed `scale_down_nodes_after_idle_duration` as `PT2M` in state vs. `PT120S` in config — a cosmetic Azure-side normalization (same 120-second duration), but one that would recur on every future plan if left unfixed. Fixed in platform commit `22a514ced8cedcbf7147671ab80cd33d15840397` (render `PT2M` directly). Published (PR #20, merge `58db97f778da451f3793d3163e6597e21adcb224`) and validated (PR #21, merge `761a9d6c3bb2b325fa7c3b9eab52e5a5ff57f98c`).
+
+| Evidence | Sanitized result |
+|---|---|
+| Saved plan | Run `31844256729`, attempt `1`, source commit `761a9d6c3bb2b325fa7c3b9eab52e5a5ff57f98c` |
+| Plan digests | Binary `sha256:926a7a66b14db13ea87b510e47f75c4eebbf25cb5b0ce7d5916dfcc4861a84ba`; sanitized JSON `sha256:f9b4dee458aeb894e16e920fa3c66321ad85923568dda95f31f0b7db014db8c9` |
+| Independent representation | Re-derived locally with Terraform `1.10.0` against live backend state; byte-identical sanitized JSON; `scripts/plan_artifact.py verify` passed against the live current-state snapshot |
+| Action summary | **12 no-op, 0 changes** — fully clean; both fixes resolved cleanly with no further drift |
+| Apply | Not dispatched; awaiting owner authorization. Given zero infrastructure changes, apply is a formality confirming state — the real remaining test is the `train.yml` re-dispatch after apply |
+
+Disposition: `saved_plan_review_passed_apply_not_authorized` (fully clean, second time).
 7. Begin the separately-gated Azure ML workload evidence sequence: training, evaluation, immutable model registration, declared retraining dataset, winning/losing challenger branches, conditional batch redeployment, and production-monitoring proof. None of that is authorized by this plan — each step needs its own explicit authorization, matching the R1 Dev clean-room evidence matrix.
 
 ## Documentation changelog
