@@ -143,7 +143,7 @@ resource "azurerm_machine_learning_compute_cluster" "training" {
   scale_settings {
     min_node_count                       = 0
     max_node_count                       = 1
-    scale_down_nodes_after_idle_duration = "PT[[ execution.training.cloud_fallback.idle_seconds_before_scaledown ]]S"
+    scale_down_nodes_after_idle_duration = "PT[[ (execution.training.cloud_fallback.idle_seconds_before_scaledown // 60) ~ 'M' if execution.training.cloud_fallback.idle_seconds_before_scaledown % 60 == 0 else execution.training.cloud_fallback.idle_seconds_before_scaledown ~ 'S' ]]"
   }
   identity {
     type         = "UserAssigned"
@@ -163,7 +163,7 @@ resource "azurerm_machine_learning_compute_cluster" "batch" {
   scale_settings {
     min_node_count                       = 0
     max_node_count                       = 1
-    scale_down_nodes_after_idle_duration = "PT[[ execution.batch.cloud_fallback.idle_seconds_before_scaledown ]]S"
+    scale_down_nodes_after_idle_duration = "PT[[ (execution.batch.cloud_fallback.idle_seconds_before_scaledown // 60) ~ 'M' if execution.batch.cloud_fallback.idle_seconds_before_scaledown % 60 == 0 else execution.batch.cloud_fallback.idle_seconds_before_scaledown ~ 'S' ]]"
   }
   identity {
     type         = "UserAssigned"
