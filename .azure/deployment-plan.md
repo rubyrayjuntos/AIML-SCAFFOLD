@@ -324,7 +324,16 @@ Owner submitted a quota-increase support request (case `2608140040007160`) via t
 | Action summary | 8 no-op (all previously-applied resources unchanged); 4 create: `azurerm_user_assigned_identity.compute`, `azurerm_role_assignment.compute_storage` (`Storage Blob Data Contributor` by name, scoped to the project storage account), `azurerm_machine_learning_compute_cluster.training`, `azurerm_machine_learning_compute_cluster.batch` |
 | Apply | Not dispatched; awaiting owner authorization. This plan is expected to either (a) apply cleanly, proving the quota fix actually works for cluster *creation* — matching the ad-hoc test — or (b) fail at apply time on VM provisioning, matching the SKU catalog. Either outcome is real evidence; the subsequent `train.yml` dispatch against real workspace RBAC is what actually answers whether a node can run a job |
 
-Disposition: `saved_plan_review_passed_apply_not_authorized`.
+**Apply.** Owner authorized apply of plan run `31839827041` attempt `1`, sanitized-JSON digest `sha256:f55dd6239ac5292c2f226511a8ddf7de759b6d506fa5a6840a6c209b7d68acea`, via direct instruction on 2026-08-14. Dispatched as run [31840751192](https://github.com/rubyrayjuntos/azure-aiml-ops/actions/runs/31840751192).
+
+| Evidence | Sanitized result |
+|---|---|
+| Outcome | `success` — every step passed, including `Verify applied identity and RBAC graph` and `Record infrastructure evidence` |
+| Post-apply state | `terraform state pull`: serial `10`; all 12 declared resources tracked, no taint |
+| Live cluster check | `az ml compute list`: `cpu-training` and `cpu-batch`, both `amlcompute`, `Standard_D2s_v3`, `State: Succeeded` |
+| Significance | **The approved quota increase (`Total Regional vCPUs` 65→73) does unblock real cluster provisioning through the reviewed pipeline**, resolving the disagreement between the SKU catalog check (still says restricted) and the earlier ad-hoc test (said it worked) in favor of the ad-hoc result. Cluster *creation* succeeding is not yet proof a node can actually run a job — that is the next, separate test (dispatching `train.yml`) |
+
+Disposition: `apply_succeeded`. Compute infrastructure for cloud training and batch is live. Whether a node can actually be allocated and run a job remains untested until a real job is dispatched through the workflow.
 7. Begin the separately-gated Azure ML workload evidence sequence: training, evaluation, immutable model registration, declared retraining dataset, winning/losing challenger branches, conditional batch redeployment, and production-monitoring proof. None of that is authorized by this plan — each step needs its own explicit authorization, matching the R1 Dev clean-room evidence matrix.
 
 ## Documentation changelog
