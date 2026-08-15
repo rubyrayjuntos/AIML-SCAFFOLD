@@ -27,7 +27,7 @@ jobs:
   prepare:
     type: command
     code: ../../../data-science/src
-    environment: azureml:[[ project_name ]]-train-env:1
+    environment: azureml:[[ project_name ]]-train-env@latest
 {% if training_serverless_enabled %}
     resources:
       instance_type: [[ execution.training.cloud_fallback.instance_type ]]
@@ -45,7 +45,7 @@ jobs:
   train:
     type: command
     code: ../../../data-science/src
-    environment: azureml:[[ project_name ]]-train-env:1
+    environment: azureml:[[ project_name ]]-train-env@latest
 {% if training_serverless_enabled %}
     resources:
       instance_type: [[ execution.training.cloud_fallback.instance_type ]]
@@ -59,7 +59,7 @@ jobs:
   evaluate:
     type: command
     code: ../../../data-science/src
-    environment: azureml:[[ project_name ]]-train-env:1
+    environment: azureml:[[ project_name ]]-train-env@latest
 {% if training_serverless_enabled %}
     resources:
       instance_type: [[ execution.training.cloud_fallback.instance_type ]]
@@ -79,7 +79,7 @@ jobs:
   register:
     type: command
     code: ../../../data-science/src
-    environment: azureml:[[ project_name ]]-train-env:1
+    environment: azureml:[[ project_name ]]-train-env@latest
 {% if training_serverless_enabled %}
     resources:
       instance_type: [[ execution.training.cloud_fallback.instance_type ]]
