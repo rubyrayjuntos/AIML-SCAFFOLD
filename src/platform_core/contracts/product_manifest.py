@@ -160,6 +160,12 @@ class BatchExecution(BaseModel):
     cloud_fallback: AzureBatchFallback = Field(default_factory=AzureBatchFallback)
 
 
+class MonitoringExecution(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = False
+
+
 class ExecutionPolicy(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -168,6 +174,7 @@ class ExecutionPolicy(BaseModel):
     )
     training: TrainingExecution = Field(default_factory=TrainingExecution)
     batch: BatchExecution = Field(default_factory=BatchExecution)
+    monitoring: MonitoringExecution = Field(default_factory=MonitoringExecution)
 
 
 class CostPolicy(BaseModel):

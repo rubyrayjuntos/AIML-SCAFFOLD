@@ -188,6 +188,7 @@ def generate_project(
             "training_serverless_enabled"
         ],
         "batch_cluster_enabled": plan.applied_defaults["batch_cluster_enabled"],
+        "monitoring_enabled": plan.applied_defaults["monitoring_enabled"],
         "compute_identity_required": plan.applied_defaults[
             "compute_identity_required"
         ],
@@ -225,6 +226,12 @@ def generate_project(
             relative == ".github/workflows/deploy-batch.yml.j2"
             or relative.startswith("mlops/azureml/deploy/batch/")
         ):
+            continue
+        if not manifest.execution.monitoring.enabled and relative in {
+            ".github/workflows/check-drift.yml.j2",
+            "data-science/src/snapshot_baseline.py",
+            "data-science/src/check_drift.py",
+        }:
             continue
         destination_relative = relative[:-3] if relative.endswith(".j2") else relative
         destination = output / destination_relative

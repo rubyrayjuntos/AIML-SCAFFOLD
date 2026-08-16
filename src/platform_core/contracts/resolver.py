@@ -37,6 +37,7 @@ def resolve_project_plan(
         training_cloud.enabled and training_cloud.mode == "azure_ml_serverless"
     )
     batch_cluster_enabled = batch_cloud.enabled
+    monitoring_enabled = manifest.execution.monitoring.enabled
     azure_context = manifest.shared_resources.azure_context
     backend_subscription = manifest.shared_resources.terraform_backend.subscription_id
     deployment_subscription = str(azure_context.subscription_id).lower()
@@ -98,6 +99,15 @@ def resolve_project_plan(
                 notes="Explicit SKU; zero minimum and one-node Dev maximum.",
             )
         )
+    if monitoring_enabled:
+        resources.append(
+            PlannedResource(
+                kind="monitoring_storage_container",
+                owner="terraform",
+                cost_class=ResourceCostClass.ALWAYS_ON,
+                notes="Baseline snapshot and inference-log evidence for drift detection.",
+            )
+        )
     providers = {
         "infrastructure": "terraform",
         "development": "local",
@@ -151,6 +161,7 @@ def resolve_project_plan(
             "training_cluster_enabled": training_cluster_enabled,
             "training_serverless_enabled": training_serverless_enabled,
             "batch_cluster_enabled": batch_cluster_enabled,
+            "monitoring_enabled": monitoring_enabled,
             "compute_identity_required": (
                 training_cluster_enabled or batch_cluster_enabled
             ),
@@ -173,7 +184,8 @@ def resolve_project_plan(
             "github_actions",
         ]
         + (["azure_ml_training"] if training_cloud.enabled else [])
-        + (["azure_ml_batch"] if batch_cloud.enabled else []),
+        + (["azure_ml_batch"] if batch_cloud.enabled else [])
+        + (["azure_ml_monitoring"] if monitoring_enabled else []),
         resources=resources,
         preconditions=[
             "Environment resource group exists.",
@@ -186,8 +198,14 @@ def resolve_project_plan(
             "R1 providers remain preview until the Dev clean-room proof succeeds.",
             "Local lifecycle evidence does not prove Azure ML execution, identity, "
             "lineage, registration, or batch serving.",
-            "Bicep, online serving, monitoring, retraining, Foundry, Search, and "
-            "Databricks are excluded.",
+            "Bicep, online serving, automated retraining, Foundry, Search, and "
+            "Databricks are excluded."
+            + (
+                " Manually-triggered batch input-drift detection is included when "
+                "monitoring is enabled; it never triggers retraining automatically."
+                if monitoring_enabled
+                else " Input-drift detection is excluded unless monitoring is enabled."
+            ),
         ],
         approval_required=True,
         approval_policy=manifest.policy.deployment_approval,

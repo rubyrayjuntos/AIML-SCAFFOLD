@@ -51,7 +51,7 @@ jobs:
         continue-on-error: true
         run: |
           az ml batch-endpoint create -g "rg-[[ project_name ]]-[[ environment ]]" -w "mlw-[[ project_name ]]-[[ environment ]]" --file mlops/azureml/deploy/batch/endpoint.yml
-          az ml batch-deployment create -g "rg-[[ project_name ]]-[[ environment ]]" -w "mlw-[[ project_name ]]-[[ environment ]]" --file mlops/azureml/deploy/batch/deployment.yml --set model="azureml:[[ model_name ]]:${{ inputs.model_version }}"
+          az ml batch-deployment create -g "rg-[[ project_name ]]-[[ environment ]]" -w "mlw-[[ project_name ]]-[[ environment ]]" --file mlops/azureml/deploy/batch/deployment.yml --set model="azureml:[[ model_name ]]:${{ inputs.model_version }}"{% if monitoring_enabled %} --set environment_variables.MONITORING_STORAGE_ACCOUNT="${{ steps.context.outputs.storage }}"{% endif %}
           JOB_ID=$(az ml batch-endpoint invoke -g "rg-[[ project_name ]]-[[ environment ]]" -w "mlw-[[ project_name ]]-[[ environment ]]" --name "[[ batch_endpoint_name ]]" --input "${{ inputs.input_data_uri }}" --input-type uri_file --query name -o tsv --only-show-errors)
           echo "job_id=$JOB_ID" >> "$GITHUB_OUTPUT"
           az ml job stream -g "rg-[[ project_name ]]-[[ environment ]]" -w "mlw-[[ project_name ]]-[[ environment ]]" --name "$JOB_ID"

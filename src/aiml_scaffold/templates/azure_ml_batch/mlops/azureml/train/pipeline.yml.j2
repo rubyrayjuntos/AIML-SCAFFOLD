@@ -9,6 +9,10 @@ inputs:
   champion_metric:
     type: number
     default: -1.0
+{% if monitoring_enabled %}
+  storage_account:
+    type: string
+{% endif %}
 outputs:
   train_data:
   test_data:
@@ -94,3 +98,22 @@ jobs:
       decision: ${{parent.jobs.evaluate.outputs.evaluation}}
     outputs:
       info: ${{parent.outputs.model_info_output}}
+{% if monitoring_enabled %}
+  snapshot_baseline:
+    type: command
+    code: ../../../data-science/src
+    environment: azureml:[[ project_name ]]-train-env@latest
+{% if training_serverless_enabled %}
+    resources:
+      instance_type: [[ execution.training.cloud_fallback.instance_type ]]
+      instance_count: 1
+{% endif %}
+    command: >-
+      python snapshot_baseline.py --model-name [[ model_name ]]
+      --reference-data ${{inputs.train}} --model-info ${{inputs.model_info}}
+      --storage-account ${{inputs.storage_account}} --container monitoring
+    inputs:
+      train: ${{parent.jobs.prepare.outputs.train}}
+      model_info: ${{parent.jobs.register.outputs.info}}
+      storage_account: ${{parent.inputs.storage_account}}
+{% endif %}
