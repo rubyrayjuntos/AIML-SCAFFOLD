@@ -37,7 +37,7 @@ jobs:
           terraform_version: "1.10.0"
       - name: Initialize
         run: terraform -chdir=infra/platform_foundation init -backend-config="backend-${RUN_ENVIRONMENT}.hcl"
-      - name: Capture pre-plan backend state identity
+      - name: Capture pre-plan backend state snapshot
         # No fallback here: `terraform state pull` against a backend key with
         # no state yet still exits 0 with a freshly-generated (empty)
         # document (verified directly against this project's own backend,
