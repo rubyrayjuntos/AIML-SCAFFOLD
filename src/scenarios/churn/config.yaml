@@ -17,3 +17,5 @@ model:
   minimum_rows: 7043
   candidate_models: [logistic_regression, random_forest]
 playbooks_table: gold.recommended_actions
+notes_table: gold.customer_notes
+tickets_table: gold.support_tickets

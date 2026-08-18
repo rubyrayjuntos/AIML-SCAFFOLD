@@ -20,6 +20,7 @@ promotion_policy:
 serving:
   endpoint: churn-model-endpoint
 retrieval:
+  endpoint: churn-retrieval-endpoint
   vector_indexes:
     - notes_vs
     - tickets_vs

@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     feature_contract: str = "unconfigured"
     foundry_endpoint: str | None = None
     foundry_deployment: str | None = None
+    vector_search_endpoint: str = ""
+    notes_table: str = ""
+    tickets_table: str = ""
+    playbooks_table: str = ""
 
     @classmethod
     def from_scenario(cls, scenario_dir: Path | None = None, **overrides) -> Settings:
@@ -33,6 +37,10 @@ class Settings(BaseSettings):
             "databricks_catalog": config["catalogs"][environment],
             "feature_schema_version": scenario["features"]["version"],
             "feature_contract": scenario["features"]["contract"],
+            "vector_search_endpoint": scenario["retrieval"]["endpoint"],
+            "notes_table": config["notes_table"],
+            "tickets_table": config["tickets_table"],
+            "playbooks_table": config["playbooks_table"],
         }
         values.update(overrides)
         return cls(**values)
