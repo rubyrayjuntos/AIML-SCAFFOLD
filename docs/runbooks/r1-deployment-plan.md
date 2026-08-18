@@ -2,7 +2,11 @@
 
 > **Status:** R1 Dev infrastructure apply complete (8 resources); Azure ML workload lifecycle remains unexercised
 
+For the bootstrap prerequisites this plan builds on (GitHub environment, resource group, backend container, Entra application, RBAC) — provisioned separately and *before* this plan — see [`r1-bootstrap-deployment.md`](r1-bootstrap-deployment.md).
+
 Generated: 2026-08-12
+
+Relocated 2026-08-17 from `.azure/deployment-plan.md`; no tooling in this repository reads it programmatically from that path, so the move carries no functional dependency. Content is otherwise unchanged aside from this note and one corrected sibling-file path (see the Documentation changelog).
 
 ## 1. Project overview
 
@@ -258,7 +262,7 @@ The approved Azure validation workflow executed locally and with authenticated r
 | `src/aiml_scaffold/templates/azure_ml_batch/scripts/plan_artifact.py` | Saved-plan governance digest binding | Implemented locally |
 | `tests/unit/test_generator.py` | Governance generation and provenance regression tests | Focused tests passing |
 | `docs/decisions/0009-r1-deployment-plan-governance.md` | Governance ownership and digest ADR | Implemented locally |
-| `docs/superpowers/plans/r1-dev-evidence-matrix.md` | Candidate retirement and replacement evidence | Prior plan retired; replacement pending |
+| `docs/architecture/r1-dev-evidence-matrix.md` | Candidate retirement and replacement evidence | Prior plan retired; replacement pending |
 
 ## 10. Authorization and stop conditions
 
@@ -358,6 +362,7 @@ Disposition: `saved_plan_review_passed_apply_not_authorized` (fully clean, secon
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 2.5.0 | 2026-08-12 | 2026-08-17 | Ray Swan / Claude | Relocated from `.azure/deployment-plan.md` to `docs/runbooks/r1-deployment-plan.md` — no repository tooling reads it programmatically from the old path. Added a cross-link to the complementary `r1-bootstrap-deployment.md` runbook and corrected its own reference to the relocated `docs/architecture/r1-dev-evidence-matrix.md`. |
 | 2.4.0 | 2026-08-13 | 2026-08-13 | Ray Swan / Claude | Applied the clean saved plan (run `31662465677`, owner-authorized). Apply run `31663570921` succeeded end to end in 13 seconds (8 no-op, 0 changes), including the identity/RBAC verification and evidence-recording steps that failed on every prior attempt. R1 Dev infrastructure (Log Analytics, Application Insights, Key Vault, storage account with identity-based access, evidence container and lifecycle policy, ML workspace, workflow RBAC) is now live. Azure ML workload lifecycle (training/registration/challenger/redeploy/monitoring) remains entirely unexercised and separately gated. |
 | 2.3.0 | 2026-08-13 | 2026-08-13 | Ray Swan / Claude | Applied run 31655061017 (owner-authorized): 3 of 9 resources created, then failed on storage data-plane auth. Diagnosed and fixed (storage_use_azuread); reapplied and failed again on redundant workspace RBAC plus an evidence-write RBAC-propagation race; diagnosed and fixed both (removed the redundant role assignment, added retry/backoff). A third finding — a spurious role-assignment replace from ARM role-definition-ID path-format ambiguity — was fixed before any further apply (role_definition_name). Final saved plan `31662465677` independently re-verified as 8 no-op, 0 changes. All 8 resources now live and correctly configured; apply of the clean plan remains unauthorized. |
 | 2.2.0 | 2026-08-12 | 2026-08-13 | Ray Swan / Claude | Published the local-first regeneration and Azure validation workflow evidence through PRs #8/#9, produced saved Terraform plan `31655061017` (9 creates, 0 updates/replacements/deletes), and independently re-derived and verified the sanitized plan JSON with a locally-downloaded Terraform 1.10.0 against the live backend. Apply remains unauthorized. |

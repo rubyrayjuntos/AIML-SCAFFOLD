@@ -1,6 +1,6 @@
 # R1 Dev bootstrap deployment runbook
 
-This runbook provisions only the approved prerequisites for the `azure-ai-ml-ops` R1 Dev candidate. It does not generate or deploy the Azure ML project.
+This runbook provisions only the approved prerequisites for the `azure-ai-ml-ops` R1 Dev candidate. It does not generate or deploy the Azure ML project. For that — the actual Azure ML workspace, storage, compute, and workload lifecycle deployment that follows this bootstrap, plus its live status log — see [`r1-deployment-plan.md`](r1-deployment-plan.md).
 
 ## Approved scope
 
@@ -46,6 +46,7 @@ The initial deployment completed on 2026-08-11. On 2026-08-12, an approved corre
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 0.4.0 | 2026-08-11 | 2026-08-17 | Ray Swan / Claude | Added a cross-link to `r1-deployment-plan.md`, the complementary workload deployment plan and status log that follows this bootstrap runbook. |
 | 0.3.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded the identity-only correction to GitHub's ID-qualified subject, adopted the owner-approved public repository intent, and verified a clean post-apply plan. |
 | 0.2.0 | 2026-08-11 | 2026-08-11 | Ray Swan / Codex | Recorded the GitHub private-repository billing limitation, supported protected-branch fallback, and unresolved manual-approval enforcement gate. |
 | 0.1.0 | 2026-08-11 | 2026-08-11 | Ray Swan / Codex | Defined approved Terraform bootstrap scope, circular-backend seed/import sequence, risk gates, rollback, and validation boundary. |

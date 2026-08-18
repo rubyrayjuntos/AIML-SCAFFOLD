@@ -79,6 +79,12 @@ variable "backend_container_name" {
   default     = "azure-ai-ml-ops-r1"
 }
 
+variable "platform_foundation_container_name" {
+  description = "Dedicated R3.2 backend container for the infra/platform_foundation/ Terraform root (ADR 0012)."
+  type        = string
+  default     = "aiml-platform-foundation"
+}
+
 variable "environment_resource_group_name" {
   description = "Administrator-owned R1 Dev environment boundary."
   type        = string
@@ -107,4 +113,30 @@ variable "application_owner_object_id" {
   description = "Entra object ID retained as an owner of the new application."
   type        = string
   default     = "a703a773-2881-456b-a8fc-3a007d6c2463"
+}
+
+# ADR 0014: the factory's own repository (this repo), distinct from
+# github_repository/github_owner above, which target the generated project.
+variable "factory_github_owner" {
+  description = "Owner of the factory's own source repository (AIML-SCAFFOLD)."
+  type        = string
+  default     = "rubyrayjuntos"
+}
+
+variable "factory_github_owner_id" {
+  description = "Immutable numeric ID of factory_github_owner, as used in this account's GitHub OIDC subject claim format."
+  type        = string
+  default     = "204968804"
+}
+
+variable "factory_github_repository" {
+  description = "Name of the factory's own source repository."
+  type        = string
+  default     = "AIML-SCAFFOLD"
+}
+
+variable "factory_github_repository_id" {
+  description = "Immutable numeric ID of factory_github_repository, as used in this account's GitHub OIDC subject claim format."
+  type        = string
+  default     = "1327267446"
 }

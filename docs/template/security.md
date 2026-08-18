@@ -2,7 +2,7 @@
 
 ## Identity
 
-GitHub Actions uses Entra federated credentials and OIDC. Runtime services use managed identities. Personal access tokens and long-lived client secrets are not supported in production.
+GitHub Actions uses Entra federated credentials and OIDC. Runtime services use managed identities; any remaining secrets are stored in RBAC-enabled Key Vault. Personal access tokens and long-lived client secrets are not supported in production.
 
 Terraform apply is restricted to identities named in the protected environment's `APPLY_AUTHORIZED_ACTORS` variable. Authorization still requires the exact reviewed binary-plan digest, sanitized-plan digest, approval reason, and environment confirmation; the allowlist is not a substitute for those bindings.
 
@@ -14,16 +14,21 @@ Workload Terraform grants `Storage Blob Data Contributor` at the exact project-s
 
 ## Network profiles
 
-R1 live acceptance is Dev-only. The resolved plan and documentation must expose any public-network or always-on-resource tradeoff. Production private-network conformance is deferred and must not inherit a Dev evidence claim.
+R1 live acceptance is Dev-only. The resolved plan and documentation must expose any public-network or always-on-resource tradeoff. Production private-network conformance is deferred and must not inherit a Dev evidence claim — the target is for production storage and Key Vault to disable public network access and use private endpoints/private DNS, but this is not yet proven. Development exceptions are explicit in the deployment profile and cannot silently apply to production.
 
 ## Data and agent controls
 
-Foundry is outside R1. Generated evidence rejects sensitive metadata keys recursively and permits only identifiers, metrics, hashes, and immutable artifact references. Credentials, tokens, raw training data, prompts, and sensitive inference payloads are prohibited.
+Foundry is outside R1. When Foundry tools are used, they are read-only application functions; arbitrary SQL and mutation are prohibited. Generated evidence rejects sensitive metadata keys recursively and permits only identifiers, metrics, hashes, and immutable artifact references. Credentials, tokens, raw training data, prompts, and sensitive inference payloads are prohibited.
+
+## Observability
+
+Logs and traces include correlation IDs but never customer secrets or access tokens.
 
 ## Documentation changelog
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.1.0 | 2026-08-07 | 2026-08-17 | Ray Swan / Claude | Merged in docs/architecture/security.md's unique content (Key Vault secret storage, Foundry read-only tool constraint, observability/logging redaction, and the production-network target); that file is now a redirect stub. |
 | 1.0.0-rc4 | 2026-08-07 | 2026-08-12 | Ray Swan / Codex | Documented the three purpose-scoped project-storage data roles, including the workspace identity requirement. |
 | 1.0.0-rc3 | 2026-08-07 | 2026-08-12 | Ray Swan / Codex | Added protected-environment apply-actor allowlisting and digest-bound approval evidence. |
 | 1.0.0-rc2 | 2026-08-07 | 2026-08-12 | Ray Swan / Codex | Documented identity-based workspace storage and separated workspace, compute, and workflow identity permissions. |

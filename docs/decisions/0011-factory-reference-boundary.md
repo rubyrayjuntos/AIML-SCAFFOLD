@@ -32,10 +32,12 @@ The factory's success condition is therefore a progression, not a single destina
 - Every future resource the factory provisions for its own reference proof must be classified: factory-owned, generated-project-owned, or shared-service candidate. R3.1's target-state inventory introduces this classification as a resource ownership matrix; later resources should be classified at creation time, not retrofitted.
 - A generated project's manifest may declare that it *consumes* a shared platform service, but the factory must never make that the only path — an equivalent self-provisioned option must exist, or the "opinionated but not a single-use-case template" balance is broken.
 - `azure-mlops` remains available for provenance and for rescuing known-good implementation details, but no R3+ decision should be designed around preserving compatibility with it.
+- ADR 0013 records the earlier 2026-08-08 product-manifest design spec that this boundary formalization superseded, and preserves the parts of that spec still worth carrying forward.
 
 ## Documentation changelog
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 0.3.0 | 2026-08-17 | 2026-08-17 | Ray Swan / Claude | Added a Consequences cross-reference to ADR 0013, which records the product-manifest design spec this ADR's terminology superseded. |
 | 0.2.0 | 2026-08-17 | 2026-08-17 | Ray Swan / Claude | Corrected the Salesforce analogy: the target is a working starter-store-equivalent reference product, not scaffolding. Added the code-to-configuration-to-business-accessible-configuration progression as the factory's actual success criterion. |
 | 0.1.0 | 2026-08-17 | 2026-08-17 | Ray Swan / Claude | Initial record of the factory/reference/shared-service boundary and the no-accidental-inheritance invariant, established while redefining R3. |
