@@ -27,23 +27,13 @@ The manifest declares Azure tenant and deployment subscription independently fro
 
 ## Documentation map
 
-- [Template architecture](docs/template/architecture.md)
-- [Template configuration](docs/template/configuration.md)
-- [Extension guide](docs/template/extension-guide.md)
-- [Deployment guide](docs/template/deployment.md)
-- [Template lifecycle](docs/template/lifecycle.md)
-- [Resource ownership](docs/architecture/resource-ownership.md)
-- [Environment strategy](docs/architecture/environment-strategy.md)
-- [Churn scenario](docs/scenarios/churn/README.md)
-- [Churn data contract](docs/scenarios/churn/data-contract.md)
-- [Churn feature catalog](docs/scenarios/churn/feature-catalog.md)
-- [Churn evaluation](docs/scenarios/churn/evaluation.md)
-- [Churn demo runbook](docs/scenarios/churn/demo-runbook.md)
-- [Development tooling and context servers](docs/template/tooling.md)
-- [Identity, Key Vault, and environment profiles](docs/template/identity-and-environments.md)
-- [R1 capability ledger](docs/architecture/azure-ml-capability-ledger.md)
-- [R1 local generation runbook](docs/runbooks/r1-local-generation.md)
-- [R1 compatibility matrix](docs/architecture/r1-compatibility-matrix.md)
+The full documentation index — organized by ADRs, living architecture, template shape, runbooks, scenarios, and demos — lives in [`docs/README.md`](docs/README.md). Start there rather than expecting this file to hand-link every doc.
+
+A few entry points worth going to directly:
+
+- [`docs/README.md`](docs/README.md) — the documentation index and taxonomy (where new docs belong).
+- [`docs/architecture/`](docs/architecture/) — the living description of current-state architecture and evidence.
+- [`docs/decisions/`](docs/decisions/) — why we made key decisions, recorded as point-in-time ADRs.
 
 The repository is a reusable template first. Churn is a reference scenario built on top of the template; scenario-specific assumptions must not leak into `platform_core`.
 
@@ -73,6 +63,7 @@ The contract kernel, deterministic generator, local lifecycle, conditional Terra
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.0.0-rc5 | 2026-08-07 | 2026-08-17 | Ray Swan / Claude | Replaced the hand-maintained Documentation map with a pointer to the new `docs/README.md` index plus direct links to architecture, decisions, and the index itself, to stop the map drifting out of date. |
 | 1.0.0-rc4 | 2026-08-07 | 2026-08-12 | Ray Swan / Codex | Made Dev local-first, split Azure training and batch into explicit one-node compute policies, and added cost-aware cloud workflow gates without claiming Azure-live validation. |
 | 1.0.0-rc3 | 2026-08-07 | 2026-08-11 | Ray Swan / Codex | Added explicit Azure context, cross-subscription backend policy, composite evidence receipts, and tri-state read-only doctor reporting. |
 | 1.0.0-rc2 | 2026-08-07 | 2026-08-11 | Ray Swan / Codex | Added R1 preflight evidence integrity, provenance, typed extensions, maturity reporting, and dependency constraints. |

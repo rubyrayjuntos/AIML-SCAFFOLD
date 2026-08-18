@@ -23,6 +23,7 @@ This repository is an Azure-first, reusable enterprise ML workflow template. The
 - Foundry tools must be allowlisted, read-only application functions unless a future ADR explicitly changes that policy.
 - Add or update tests with behavior changes.
 - Every Markdown document requires a versioned changelog containing version, created date, modified date, who, and notes.
+- Architectural decisions are recorded as point-in-time ADRs under `docs/decisions/`. Before assuming a "why was it built this way" question is unanswered, check there — see `docs/README.md` for the full documentation taxonomy.
 
 ## Validation
 
@@ -44,5 +45,6 @@ When available, use Azure MCP for Azure resource/IaC context, Foundry MCP for Fo
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 0.3.0 | 2026-08-07 | 2026-08-17 | Ray Swan / Claude | Added a pointer to `docs/decisions/` so agents check for existing ADRs before assuming a "why" question is unanswered. |
 | 0.2.0 | 2026-08-07 | 2026-08-11 | Ray Swan / Codex | Made Terraform authoritative for R1 Azure ML generation and retained Bicep as a non-overlapping experimental path. |
 | 0.1.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Initial repository-specific agent instructions. |

@@ -10,11 +10,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
       - run: python -m pip install -e '.[dev]'
       - run: ruff check .
       - run: pytest
+      - name: Check documentation changelog convention
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          base_ref="$BASE_REF"
+          if git rev-parse --verify --quiet "origin/${base_ref}" >/dev/null; then
+            added=$(git diff --name-only --diff-filter=A "origin/${base_ref}...HEAD" -- 'docs/**/*.md')
+          else
+            echo "::warning::origin/${base_ref} not available; skipping changelog check."
+            added=""
+          fi
+          status=0
+          for f in $added; do
+            grep -q '## Documentation changelog' "$f" || { echo "::error::$f is missing a '## Documentation changelog' section"; status=1; }
+          done
+          exit $status
       - name: Build web application when dependencies are available
         working-directory: webapp
         run: |
