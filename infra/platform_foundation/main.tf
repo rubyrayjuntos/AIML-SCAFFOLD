@@ -107,3 +107,42 @@ resource "azurerm_databricks_workspace" "platform_foundation" {
     managed_by  = "r3.2-platform-foundation-terraform"
   }
 }
+
+# R3.2 Step D: platform-administration grants (create/manage) for the apply
+# identity, distinct from the runtime/consumer grant below. RBAC declared here
+# is not evidence either identity can actually use it - see R3.3.
+locals {
+  contributor_role_id                    = "/subscriptions/${var.subscription_id}/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"
+  cognitive_services_contributor_role_id = "/subscriptions/${var.subscription_id}/providers/Microsoft.Authorization/roleDefinitions/25fbc0a9-bd7c-42a3-aa1a-3b75d497ee68"
+  cognitive_services_openai_user_role_id = "/subscriptions/${var.subscription_id}/providers/Microsoft.Authorization/roleDefinitions/5e0bd9bd-7b93-4f28-af87-19fc36ad61bd"
+}
+
+resource "azurerm_role_assignment" "apply_databricks_rg_contributor" {
+  name                             = uuidv5("url", "${azurerm_resource_group.platform_foundation.id}|${var.apply_principal_object_id}|${local.contributor_role_id}")
+  scope                            = azurerm_resource_group.platform_foundation.id
+  role_definition_id               = local.contributor_role_id
+  principal_id                     = var.apply_principal_object_id
+  principal_type                   = "ServicePrincipal"
+  skip_service_principal_aad_check = true
+}
+
+resource "azurerm_role_assignment" "apply_foundry_contributor" {
+  name                             = uuidv5("url", "${azurerm_cognitive_account.foundry.id}|${var.apply_principal_object_id}|${local.cognitive_services_contributor_role_id}")
+  scope                            = azurerm_cognitive_account.foundry.id
+  role_definition_id               = local.cognitive_services_contributor_role_id
+  principal_id                     = var.apply_principal_object_id
+  principal_type                   = "ServicePrincipal"
+  skip_service_principal_aad_check = true
+}
+
+# Runtime/consumer grant (use, not manage) for the churn reference workload's
+# existing compute identity. Databricks-side runtime grant is scoped at R3.3,
+# not declared blind here - only the Foundry data-plane grant is known yet.
+resource "azurerm_role_assignment" "runtime_foundry_openai_user" {
+  name                             = uuidv5("url", "${azurerm_cognitive_account.foundry.id}|${var.compute_principal_object_id}|${local.cognitive_services_openai_user_role_id}")
+  scope                            = azurerm_cognitive_account.foundry.id
+  role_definition_id               = local.cognitive_services_openai_user_role_id
+  principal_id                     = var.compute_principal_object_id
+  principal_type                   = "ServicePrincipal"
+  skip_service_principal_aad_check = true
+}
