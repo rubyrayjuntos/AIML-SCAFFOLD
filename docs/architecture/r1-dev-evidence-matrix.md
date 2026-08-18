@@ -291,6 +291,7 @@ Current classification:
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.16.0 | 2026-08-11 | 2026-08-17 | Ray Swan / Claude | Relocated from `docs/superpowers/plans/` to `docs/architecture/`: this file is a living, continuously-updated evidence tracker, not a disposable dated plan, and belongs alongside other current-architecture documentation. No content changed. |
 | 1.15.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Retired the unpublished implicit-SKU candidate, recorded the authorized local-first compute policy and successful temporary local lifecycle/Terraform validation, and preserved Azure/cloud planning as pending. |
 | 1.14.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Retired run `31632608556` as `superseded_before_apply` because the mandatory deployment-governance artifact was absent; confirmed no resources were mutated. |
 | 1.13.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded final governance-hardened generation, protected publication, saved-plan run `31632608556`, provenance/expiry/state binding, independent JSON and live state verification, infrastructure review, and no-apply stop. |

@@ -37,6 +37,7 @@ For historical traceability, generation `857b...35bc6` used wheel digest `sha256
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.6.0 | 2026-08-11 | 2026-08-17 | Ray Swan / Claude | Relocated from `docs/superpowers/plans/` to `docs/architecture/`: this file is a living, continuously-updated evidence tracker, not a disposable dated plan, and belongs alongside other current-architecture documentation. No content changed. |
 | 1.5.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Retired generation `7c9a4cf3...162220` and run `31632608556` before apply because the mandatory deployment-governance artifact was absent; no resources were mutated. |
 | 1.4.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded replacement generation `12207f5b...1cdab`, protected publication, saved-plan run `31626134587`, complete artifact verification, and successful pre-apply infrastructure review. |
 | 1.3.0 | 2026-08-11 | 2026-08-12 | Ray Swan / Codex | Recorded locally conformant identity-based AML storage, project-owned compute identity/RBAC, and the versioned six-file plan artifact contract pending replacement publication. |
