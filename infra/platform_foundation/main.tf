@@ -95,6 +95,12 @@ resource "azurerm_databricks_workspace" "platform_foundation" {
   sku                         = "premium"
   managed_resource_group_name = "rg-aiml-platform-foundation-dev-databricks-managed"
 
+  # Explicit, not left to the provider default: matches this repo's established
+  # Dev-only network posture (docs/template/security.md - "R1 live acceptance is
+  # Dev-only... Development exceptions are explicit"). Private networking for
+  # this root is an R3.3+/prod-readiness decision, not silently deferred here.
+  public_network_access_enabled = true
+
   tags = {
     product     = "aiml-platform-foundation"
     environment = "dev"
