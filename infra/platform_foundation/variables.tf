@@ -14,15 +14,20 @@ variable "location" {
   default     = "eastus"
 }
 
-# R3.2 Step D: both identities already exist and already do other jobs (R1's
-# deployment/OIDC identity, R1's compute identity). The grants declared against
-# them here are a genuine expansion of responsibility onto pre-existing,
-# already-audited identities - not a fresh, unreviewed identity with unknown
-# blast radius. RBAC assignment succeeding is not evidence either identity can
+# R3.2 Step D: RBAC assignment succeeding is not evidence either identity can
 # actually use it - that live proof is R3.3's job, not declared here.
+#
+# ADR 0014 correction: apply_principal_object_id originally pointed at the
+# shared R1 deployment identity (gh-azure-ai-ml-ops-r1-dev-oidc). That identity
+# is also federated to the generated project's own OIDC credential, so granting
+# it platform-foundation RBAC would have let the generated project inherit
+# factory-administration access through the same underlying principal.
+# Corrected to point at gh-aiml-scaffold-platform-oidc, the factory-specific
+# identity ADR 0014 introduces - a genuinely separate identity, not a second
+# federated credential on the same one.
 
 variable "apply_principal_object_id" {
-  description = "Object ID of the existing gh-azure-ai-ml-ops-r1-dev-oidc service principal (R1's GitHub OIDC deployment identity), gaining management-plane grants on platform_foundation resources."
+  description = "Object ID of the gh-aiml-scaffold-platform-oidc service principal (the factory's own GitHub OIDC deployment identity, ADR 0014), gaining management-plane grants on platform_foundation resources."
   type        = string
 }
 

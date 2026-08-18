@@ -62,14 +62,16 @@ resource "azurerm_role_assignment" "backend_data" {
   skip_service_principal_aad_check = true
 }
 
-# R3.2 / ADR 0012: expansion of the existing bootstrap deployment identity's
-# responsibility (not a new identity) - it now also applies infra/platform_foundation/,
-# scoped only to that root's own state container, same pattern as backend_data above.
+# ADR 0012 / ADR 0014: granted to the factory's OWN identity, not
+# deployment_principal_object_id above. Originally granted to the shared R1
+# identity, then corrected per ADR 0014 once that was found to let the
+# generated project's OIDC credential inherit platform-foundation access
+# through the same underlying service principal.
 resource "azurerm_role_assignment" "platform_foundation_backend_data" {
-  name                             = uuidv5("url", "${azurerm_storage_container.platform_foundation_state.id}|${var.deployment_principal_object_id}|${local.storage_blob_data_contributor_role_id}")
+  name                             = uuidv5("url", "${azurerm_storage_container.platform_foundation_state.id}|${var.platform_foundation_principal_object_id}|${local.storage_blob_data_contributor_role_id}")
   scope                            = azurerm_storage_container.platform_foundation_state.id
   role_definition_id               = local.storage_blob_data_contributor_role_id
-  principal_id                     = var.deployment_principal_object_id
+  principal_id                     = var.platform_foundation_principal_object_id
   principal_type                   = "ServicePrincipal"
   skip_service_principal_aad_check = true
 }

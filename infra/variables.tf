@@ -114,3 +114,29 @@ variable "application_owner_object_id" {
   type        = string
   default     = "a703a773-2881-456b-a8fc-3a007d6c2463"
 }
+
+# ADR 0014: the factory's own repository (this repo), distinct from
+# github_repository/github_owner above, which target the generated project.
+variable "factory_github_owner" {
+  description = "Owner of the factory's own source repository (AIML-SCAFFOLD)."
+  type        = string
+  default     = "rubyrayjuntos"
+}
+
+variable "factory_github_owner_id" {
+  description = "Immutable numeric ID of factory_github_owner, as used in this account's GitHub OIDC subject claim format."
+  type        = string
+  default     = "204968804"
+}
+
+variable "factory_github_repository" {
+  description = "Name of the factory's own source repository."
+  type        = string
+  default     = "AIML-SCAFFOLD"
+}
+
+variable "factory_github_repository_id" {
+  description = "Immutable numeric ID of factory_github_repository, as used in this account's GitHub OIDC subject claim format."
+  type        = string
+  default     = "1327267446"
+}
