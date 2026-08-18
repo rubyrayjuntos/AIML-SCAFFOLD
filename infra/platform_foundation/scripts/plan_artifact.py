@@ -357,6 +357,7 @@ def main() -> int:
     except (
         KeyError,
         OSError,
+        TypeError,
         ValueError,
         json.JSONDecodeError,
         subprocess.CalledProcessError,

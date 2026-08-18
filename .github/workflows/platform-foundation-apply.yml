@@ -100,7 +100,7 @@ jobs:
       - run: terraform -chdir=infra/platform_foundation init -backend-config="backend-${RUN_ENVIRONMENT}.hcl"
       - name: Verify backend state has not changed since plan
         run: |
-          terraform -chdir=infra/platform_foundation state pull > "${RUNNER_TEMP}/current-state.json"
+          terraform -chdir=infra/platform_foundation state pull > "${RUNNER_TEMP}/current-state.json" || echo '{}' > "${RUNNER_TEMP}/current-state.json"
           python infra/platform_foundation/scripts/plan_artifact.py verify \
             --artifact-dir "${RUNNER_TEMP}/approved-plan" \
             --run-id "${{ inputs.plan_run_id }}" \

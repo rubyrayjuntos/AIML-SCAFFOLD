@@ -4,7 +4,7 @@
 
 Azure Databricks and the adopted Foundry/AIServices resource are provisioned from a new, independently-plannable Terraform root, `infra/platform_foundation/`, with its own state — not folded into the existing bootstrap state (`infra/`) and not owned by any generated project's own state.
 
-Backend: the same shared storage account this repository's bootstrap state already uses (`stazmlops0001devtf`), but a new, dedicated state container/key (`aiml-platform-foundation-dev`). R3.2 does not create a new backend storage account — that is a separate, deliberately deferred question (see `docs/architecture/resource-ownership.md`'s R3 inventory).
+Backend: the same shared storage account this repository's bootstrap state already uses (`stazmlops0001devtf`), but a new, dedicated state container (`aiml-platform-foundation`) with per-environment state keys (e.g. `platform-foundation/dev.tfstate`). R3.2 does not create a new backend storage account — that is a separate, deliberately deferred question (see `docs/architecture/resource-ownership.md`'s R3 inventory).
 
 Naming is intentionally neutral. This is not called a "shared" or "enterprise" platform state, because ownership of what it contains is not yet settled: Databricks is currently classified as factory-owned reference/proving-ground infrastructure (see ADR 0011), and whether the Foundry resource ultimately becomes an enterprise-shared service is an open R4+ question. The state's name should not assert a conclusion the ownership model hasn't reached yet.
 

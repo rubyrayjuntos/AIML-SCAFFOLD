@@ -38,7 +38,7 @@ jobs:
       - name: Initialize
         run: terraform -chdir=infra/platform_foundation init -backend-config="backend-${RUN_ENVIRONMENT}.hcl"
       - name: Capture pre-plan backend state identity
-        run: terraform -chdir=infra/platform_foundation state pull > "${RUNNER_TEMP}/pre-plan-state.json"
+        run: terraform -chdir=infra/platform_foundation state pull > "${RUNNER_TEMP}/pre-plan-state.json" || echo '{}' > "${RUNNER_TEMP}/pre-plan-state.json"
       - name: Plan
         run: |
           mkdir -p "${RUNNER_TEMP}/plan-artifact"

@@ -1,6 +1,7 @@
 # R3.2 Step B (see docs/superpowers/plans/r3.2-platform-foundation.md and
-# ADR 0012). This is a saved-plan-for-review artifact - no apply has happened
-# under this declaration yet.
+# ADR 0012). Applied and live-verified — Databricks workspace provisioned
+# (Steps B-D) and Foundry resources imported (Step C). Live resources are
+# managed by this state; plan/apply has real blast radius.
 #
 # R3.2 Step C: adopting the existing, live Foundry resource (rg-RSwan-1970)
 # rather than provisioning a duplicate - see the R3.2 plan's Foundry adoption
