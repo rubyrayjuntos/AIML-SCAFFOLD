@@ -99,8 +99,13 @@ jobs:
           terraform_version: "1.10.0"
       - run: terraform -chdir=infra/platform_foundation init -backend-config="backend-${RUN_ENVIRONMENT}.hcl"
       - name: Verify backend state has not changed since plan
+        # No fallback here either - see the matching comment in
+        # platform-foundation-plan.yml. A state pull failure at apply time is
+        # even more consequential to mask, since this step exists specifically
+        # to catch drift between the reviewed plan and the real backend before
+        # applying against it.
         run: |
-          terraform -chdir=infra/platform_foundation state pull > "${RUNNER_TEMP}/current-state.json" || echo '{}' > "${RUNNER_TEMP}/current-state.json"
+          terraform -chdir=infra/platform_foundation state pull > "${RUNNER_TEMP}/current-state.json"
           python infra/platform_foundation/scripts/plan_artifact.py verify \
             --artifact-dir "${RUNNER_TEMP}/approved-plan" \
             --run-id "${{ inputs.plan_run_id }}" \

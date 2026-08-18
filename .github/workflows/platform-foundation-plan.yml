@@ -38,7 +38,15 @@ jobs:
       - name: Initialize
         run: terraform -chdir=infra/platform_foundation init -backend-config="backend-${RUN_ENVIRONMENT}.hcl"
       - name: Capture pre-plan backend state identity
-        run: terraform -chdir=infra/platform_foundation state pull > "${RUNNER_TEMP}/pre-plan-state.json" || echo '{}' > "${RUNNER_TEMP}/pre-plan-state.json"
+        # No fallback here: `terraform state pull` against a backend key with
+        # no state yet still exits 0 with a freshly-generated (empty)
+        # document (verified directly against this project's own backend,
+        # 2026-08-18: fresh lineage/serial=1/resources=[]) - there is no
+        # "state does not exist" error case to degrade gracefully from. Any
+        # nonzero exit here is a genuine failure (auth, network, backend
+        # outage, wrong credentials) and must fail this workflow, not be
+        # silently replaced with an empty document.
+        run: terraform -chdir=infra/platform_foundation state pull > "${RUNNER_TEMP}/pre-plan-state.json"
       - name: Plan
         run: |
           mkdir -p "${RUNNER_TEMP}/plan-artifact"
