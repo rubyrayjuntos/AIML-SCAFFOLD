@@ -34,6 +34,19 @@ resource "azurerm_storage_container" "state" {
   }
 }
 
+# ADR 0012: infra/platform_foundation/ gets its own dedicated state container in
+# this same shared backend account, independently plannable from the R1 bootstrap
+# state above - not a resource either root co-manages.
+resource "azurerm_storage_container" "platform_foundation_state" {
+  name                  = var.platform_foundation_container_name
+  storage_account_id    = data.azurerm_storage_account.backend.id
+  container_access_type = "private"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
 locals {
   contributor_role_id                   = "/subscriptions/${var.subscription_id}/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"
   user_access_administrator_role_id     = "/subscriptions/${var.subscription_id}/providers/Microsoft.Authorization/roleDefinitions/18d7d88d-d35e-4fb5-a5c3-7773c20a72d9"
@@ -43,6 +56,18 @@ locals {
 resource "azurerm_role_assignment" "backend_data" {
   name                             = uuidv5("url", "${azurerm_storage_container.state.id}|${var.deployment_principal_object_id}|${local.storage_blob_data_contributor_role_id}")
   scope                            = azurerm_storage_container.state.id
+  role_definition_id               = local.storage_blob_data_contributor_role_id
+  principal_id                     = var.deployment_principal_object_id
+  principal_type                   = "ServicePrincipal"
+  skip_service_principal_aad_check = true
+}
+
+# R3.2 / ADR 0012: expansion of the existing bootstrap deployment identity's
+# responsibility (not a new identity) - it now also applies infra/platform_foundation/,
+# scoped only to that root's own state container, same pattern as backend_data above.
+resource "azurerm_role_assignment" "platform_foundation_backend_data" {
+  name                             = uuidv5("url", "${azurerm_storage_container.platform_foundation_state.id}|${var.deployment_principal_object_id}|${local.storage_blob_data_contributor_role_id}")
+  scope                            = azurerm_storage_container.platform_foundation_state.id
   role_definition_id               = local.storage_blob_data_contributor_role_id
   principal_id                     = var.deployment_principal_object_id
   principal_type                   = "ServicePrincipal"

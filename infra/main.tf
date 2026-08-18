@@ -22,14 +22,15 @@ module "github_prerequisites" {
 module "azure_foundation" {
   source = "./modules/azure_foundation"
 
-  subscription_id                 = var.subscription_id
-  location                        = var.location
-  product_name                    = var.product_name
-  product_owner                   = var.product_owner
-  cost_center                     = var.cost_center
-  environment_resource_group_name = var.environment_resource_group_name
-  backend_resource_group_name     = var.backend_resource_group_name
-  backend_storage_account_name    = var.backend_storage_account_name
-  backend_container_name          = var.backend_container_name
-  deployment_principal_object_id  = module.entra_identity.service_principal_object_id
+  subscription_id                    = var.subscription_id
+  location                           = var.location
+  product_name                       = var.product_name
+  product_owner                      = var.product_owner
+  cost_center                        = var.cost_center
+  environment_resource_group_name    = var.environment_resource_group_name
+  backend_resource_group_name        = var.backend_resource_group_name
+  backend_storage_account_name       = var.backend_storage_account_name
+  backend_container_name             = var.backend_container_name
+  platform_foundation_container_name = var.platform_foundation_container_name
+  deployment_principal_object_id     = module.entra_identity.service_principal_object_id
 }

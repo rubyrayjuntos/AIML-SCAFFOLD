@@ -32,3 +32,8 @@ output "backend_container_resource_id" {
   description = "Dedicated Terraform state container resource ID."
   value       = module.azure_foundation.backend_container_resource_id
 }
+
+output "platform_foundation_container_resource_id" {
+  description = "Dedicated R3.2 platform_foundation Terraform state container resource ID (ADR 0012)."
+  value       = module.azure_foundation.platform_foundation_container_resource_id
+}

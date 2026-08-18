@@ -34,6 +34,11 @@ variable "backend_container_name" {
   type = string
 }
 
+variable "platform_foundation_container_name" {
+  description = "Dedicated state container for the R3.2 platform-foundation Terraform root (Databricks/Foundry), independent of the R1 bootstrap container."
+  type        = string
+}
+
 variable "deployment_principal_object_id" {
   type = string
 }
