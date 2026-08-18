@@ -1,77 +1,28 @@
-name: Deploy enterprise ML workflow
+name: Validate deferred reference assets
 
 on:
   workflow_dispatch:
-    inputs:
-      environment:
-        description: Deployment target
-        required: true
-        type: choice
-        options: [dev, test, prod]
-        default: dev
-      deploy_model:
-        description: Run the model workflow and candidate validation
-        required: true
-        type: boolean
-        default: false
 
 permissions:
-  id-token: write
   contents: read
 
 jobs:
-  infrastructure:
-    environment: ${{ inputs.environment }}
+  validate-only:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Azure login with OIDC
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - name: Bicep what-if
+      - name: Explain R1 boundary
+        run: >-
+          echo "This workflow performs validation only. R1 generation and live acceptance
+          use the generated repository Terraform and Azure ML batch workflows."
+      - name: Build experimental Bicep reference
         uses: azure/cli@v2
         with:
-          inlineScript: >-
-            az deployment group what-if
-            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}"
-            --template-file infra/bicep/main.bicep
-            --parameters environment=${{ inputs.environment }}
-            uniqueSuffix=${{ secrets.AZURE_UNIQUE_SUFFIX }}
-            tenantId=${{ secrets.AZURE_TENANT_ID }}
-            secureNetworkEnabled=${{ inputs.environment == 'prod' }}
-      - name: Deploy Bicep after approval
-        if: inputs.environment != 'prod' || github.event_name == 'workflow_dispatch'
-        uses: azure/cli@v2
-        with:
-          inlineScript: >-
-            az deployment group create
-            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}"
-            --template-file infra/bicep/main.bicep
-            --parameters environment=${{ inputs.environment }}
-            uniqueSuffix=${{ secrets.AZURE_UNIQUE_SUFFIX }}
-            tenantId=${{ secrets.AZURE_TENANT_ID }}
-            secureNetworkEnabled=${{ inputs.environment == 'prod' }}
-
-  databricks:
-    needs: infrastructure
-    if: inputs.deploy_model
-    environment: ${{ inputs.environment }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: databricks/setup-cli@main
-      - name: Validate and deploy Asset Bundle
-        env:
-          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          inlineScript: az bicep build --file infra/bicep/main.bicep
+      - name: Validate deferred Databricks bundle when CLI is available
         run: |
-          DATABRICKS_BUNDLE_ROOT=databricks databricks bundle validate -t "${{ inputs.environment }}"
-          DATABRICKS_BUNDLE_ROOT=databricks databricks bundle deploy -t "${{ inputs.environment }}"
-      - name: Run training workflow
-        env:
-          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-        run: |
-          echo "Training run orchestration is environment-specific; invoke the deployed job here."
-          echo "The production promotion step must remain behind the GitHub Environment approval."
+          if command -v databricks >/dev/null 2>&1; then
+            DATABRICKS_BUNDLE_ROOT=databricks databricks bundle validate -t dev
+          else
+            echo "Databricks CLI unavailable; Databricks is outside R1."
+          fi

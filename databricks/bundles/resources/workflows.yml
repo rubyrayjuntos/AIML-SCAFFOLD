@@ -10,6 +10,7 @@ resources:
               - "mlflow>=2.14,<4"
               - "pandas>=2.2,<3"
               - "scikit-learn>=1.5,<2"
+              - "databricks-sdk>=0.38,<1"
       tasks:
         - task_key: bootstrap_catalog
           environment_key: churn_runtime
@@ -51,3 +52,17 @@ resources:
               minimum_rows: "7043"
               feature_schema_version: churn.features.v1
               feature_contract: churn_feature_contract_v1
+        - task_key: seed_retrieval_gold
+          environment_key: churn_runtime
+          depends_on: [{task_key: build_gold}]
+          notebook_task:
+            notebook_path: ../../notebooks/03a_seed_retrieval_gold.py
+            base_parameters:
+              catalog: ${var.catalog}
+        - task_key: build_vector_indexes
+          environment_key: churn_runtime
+          depends_on: [{task_key: seed_retrieval_gold}]
+          notebook_task:
+            notebook_path: ../../notebooks/03b_build_vector_indexes.py
+            base_parameters:
+              catalog: ${var.catalog}

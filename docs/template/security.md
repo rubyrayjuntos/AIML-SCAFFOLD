@@ -4,20 +4,28 @@
 
 GitHub Actions uses Entra federated credentials and OIDC. Runtime services use managed identities. Personal access tokens and long-lived client secrets are not supported in production.
 
+Terraform apply is restricted to identities named in the protected environment's `APPLY_AUTHORIZED_ACTORS` variable. Authorization still requires the exact reviewed binary-plan digest, sanitized-plan digest, approval reason, and environment confirmation; the allowlist is not a substitute for those bindings.
+
 ## Resource boundaries
 
-The template distinguishes shared enterprise resources from project-owned resources. Project identities receive only the roles required for their environment and scenario.
+The template distinguishes administrator-provided bootstrap resources from Terraform-owned project resources. The workspace system identity, project-created compute identity, and GitHub workflow identity have separate ownership and purposes. Storage uses identity-based authorization with Shared Key disabled. Data-plane roles are scoped to the project storage account only where the current training, registry, batch, or evidence operation requires them. Subscription-level Owner is prohibited.
+
+Workload Terraform grants `Storage Blob Data Contributor` at the exact project-storage scope to three declared principals: the workspace system identity for identity-based default storage, the compute UAMI for model and MLflow input/output, and the workflow principal for approved lifecycle and evidence operations. Principal sources are Terraform references or manifest-governed bootstrap identity references; arbitrary runtime object IDs are prohibited.
 
 ## Network profiles
 
-Production uses private connectivity, private endpoints, private DNS, and disabled public access where supported. Development may use public endpoints only through an explicit lower-cost profile documented as a tradeoff.
+R1 live acceptance is Dev-only. The resolved plan and documentation must expose any public-network or always-on-resource tradeoff. Production private-network conformance is deferred and must not inherit a Dev evidence claim.
 
 ## Data and agent controls
 
-Foundry tools are allowlisted, read-only application functions. Agents cannot issue arbitrary SQL, access unapproved tables, or mutate data. Logs must exclude secrets and access tokens.
+Foundry is outside R1. Generated evidence rejects sensitive metadata keys recursively and permits only identifiers, metrics, hashes, and immutable artifact references. Credentials, tokens, raw training data, prompts, and sensitive inference payloads are prohibited.
 
 ## Documentation changelog
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.0.0-rc4 | 2026-08-07 | 2026-08-12 | Ray Swan / Codex | Documented the three purpose-scoped project-storage data roles, including the workspace identity requirement. |
+| 1.0.0-rc3 | 2026-08-07 | 2026-08-12 | Ray Swan / Codex | Added protected-environment apply-actor allowlisting and digest-bound approval evidence. |
+| 1.0.0-rc2 | 2026-08-07 | 2026-08-12 | Ray Swan / Codex | Documented identity-based workspace storage and separated workspace, compute, and workflow identity permissions. |
+| 1.0.0-rc1 | 2026-08-07 | 2026-08-11 | Ray Swan / Codex | Added R1 scoped identity, Dev network boundary, and evidence redaction controls. |
 | 0.1.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Initial template security policy. |

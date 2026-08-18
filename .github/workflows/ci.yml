@@ -23,11 +23,11 @@ jobs:
           else
             echo "Install webapp dependencies in the frontend job for full typecheck."
           fi
-      - name: Validate Bicep
+      - name: Validate experimental Bicep reference
         uses: azure/cli@v2
         with:
           inlineScript: az bicep build --file infra/bicep/main.bicep
-      - name: Validate Terraform portability path
+      - name: Configure Terraform for the R1 authoritative provider
         uses: hashicorp/setup-terraform@v3
       - run: terraform -chdir=infra/terraform fmt -check
       - run: terraform -chdir=infra/terraform init -backend=false

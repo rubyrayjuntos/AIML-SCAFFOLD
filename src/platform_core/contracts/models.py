@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import date, datetime
-from typing import Any, Generic, Literal, TypeVar
+from datetime import date
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -38,10 +38,7 @@ class FeatureRegistryEntry(BaseModel):
     source_datasets: list[str] = Field(min_length=1)
 
 
-T = TypeVar("T")
-
-
-class ResponseEnvelope(BaseModel, Generic[T]):
+class ResponseEnvelope[T](BaseModel):
     request_id: str
     source: str
     version: str
@@ -106,28 +103,3 @@ class ErrorResponse(BaseModel):
     message: str
     request_id: str
     details: dict[str, Any] = Field(default_factory=dict)
-
-
-class ChurnFeatureSnapshot(BaseModel):
-    customer_id: str
-    snapshot_date: date
-    tenure_months: int = Field(ge=0)
-    session_count_30d: int = Field(ge=0)
-    usage_decay_30d: float
-    open_tickets_30d: int = Field(ge=0)
-    billing_issues_30d: int = Field(ge=0)
-    health_score: float = Field(ge=0, le=1)
-
-
-class ChurnPlaybook(BaseModel):
-    action_id: str
-    title: str
-    description: str
-    trigger_conditions: list[str]
-    segment_applicability: list[str]
-    plan_tier_applicability: list[str]
-    expected_outcome: str
-    steps: list[str]
-    owner: str
-    version: str
-    effective_at: datetime

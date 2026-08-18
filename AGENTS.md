@@ -14,7 +14,8 @@ This repository is an Azure-first, reusable enterprise ML workflow template. The
 ## Implementation rules
 
 - Prefer managed identity, Entra OIDC, Key Vault references, and least-privilege RBAC.
-- Bicep is the authoritative Azure IaC path; Terraform is portability-only and must not manage the same resources.
+- Terraform is the authoritative Azure IaC path for the R1 Azure ML batch factory.
+- Bicep is experimental in R1 and must never target a resource group or resource owned by Terraform.
 - Databricks code is deployed with Asset Bundles.
 - Model versions are immutable; aliases identify lifecycle roles.
 - Never use numeric model-version defaults as lifecycle state.
@@ -43,4 +44,5 @@ When available, use Azure MCP for Azure resource/IaC context, Foundry MCP for Fo
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 0.2.0 | 2026-08-07 | 2026-08-11 | Ray Swan / Codex | Made Terraform authoritative for R1 Azure ML generation and retained Bicep as a non-overlapping experimental path. |
 | 0.1.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Initial repository-specific agent instructions. |

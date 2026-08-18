@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 from api.app import app
-from platform_core.integrations.databricks_serving import DatabricksServingAdapter
+from scenarios.churn.databricks_serving import DatabricksServingAdapter
 
 client = TestClient(app)
 

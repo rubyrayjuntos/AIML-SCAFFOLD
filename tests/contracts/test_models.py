@@ -3,7 +3,8 @@ from datetime import date
 import pytest
 from pydantic import ValidationError
 
-from platform_core.contracts.models import AssistantRequest, ChurnFeatureSnapshot, LineageMetadata
+from platform_core.contracts.models import AssistantRequest, LineageMetadata
+from scenarios.churn.contracts import ChurnFeatureSnapshot
 
 
 def test_lineage_requires_real_provenance() -> None:

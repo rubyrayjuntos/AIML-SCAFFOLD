@@ -1,33 +1,34 @@
 # Reference architecture
 
-## Boundaries
+## R1 boundaries
 
-The template has four explicit planes:
+The generated R1 project has four explicit responsibilities:
 
-1. **Data/ML plane** — Databricks, Unity Catalog, Delta tables, MLflow, and model serving.
-2. **Application plane** — FastAPI and web UI in Azure Container Apps.
-3. **Reasoning plane** — Azure AI Foundry grounded agent with approved application tools.
-4. **Delivery/operations plane** — GitHub OIDC, Bicep, DABs, approvals, Application Insights, Log Analytics, and alerts.
+1. **Infrastructure** — Terraform provisions the project-owned Dev Azure ML boundary.
+2. **ML lifecycle** — Azure ML jobs train, evaluate, conditionally register, and batch serve an explicit model version.
+3. **Evidence** — append-only project-local events and receipts normalize lifecycle evidence.
+4. **Delivery** — GitHub OIDC workflows plan/apply infrastructure and invoke lifecycle operations with pinned dependencies.
 
-The model-serving endpoint is the authority for inference. The API never loads a local model artifact or accepts a score from the browser.
+The manifest expresses product intent. A deterministic resolved plan applies platform defaults and provider capability rules before files are generated. No cloud provider SDK is required to resolve the plan.
 
-Production deployments also create a user-assigned managed identity, RBAC-enabled Key Vault with soft-delete and purge protection, a private endpoint network, and private DNS for governed storage. Development may use public service endpoints only through the explicit `secureNetworkEnabled=false` profile.
+Foundry, Search, Databricks, hybrid tools, online endpoints, monitoring, retraining, portfolio projection, and Bicep generation are excluded from R1. Existing assets for those areas are not evidence of R1 generated capability.
 
 ## Environment isolation
 
-Each environment receives an isolated resource group, catalog, storage boundary, and serving endpoint. Promotion moves code and model metadata through environments; it does not copy mutable tables or reuse a development model alias in production.
+One repository represents one product and may describe Dev/Test/Prod. Each environment has an independent resource group, state key, Azure ML workspace, storage boundary, and evidence container. R1 live acceptance covers Dev only.
 
-## Data contract
+## Provider and maturity contract
 
-The churn source must contain exactly 7,043 distinct Telco customer IDs. Any disallowed synthetic rows, unexpected row count, missing identifier, schema mismatch, or invalid label domain fails the workflow before training.
+Providers advertise immutable capability descriptors. The default `stable_only` policy rejects preview and experimental capabilities unless explicitly permitted by both the manifest and CLI. Planned capabilities can never be generated.
 
 ## Lifecycle contract
 
-Model versions are immutable. `@champion` and `@challenger` are aliases, not numeric defaults. Validation records the candidate lineage and comparison. Automated gates can reject candidates; production alias movement requires approval. Served version is tracked independently from champion version.
+Model versions are immutable. Evaluation produces a structured promotion decision; registration occurs only when it passes. Batch deployment requires an explicit version and never infers authority from `latest` or numeric ordering.
 
 ## Documentation changelog
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.0.0-rc1 | 2026-08-07 | 2026-08-11 | Ray Swan / Codex | Narrowed the architecture to the R1 Terraform, Azure ML batch, evidence, and delivery responsibilities. |
 | 0.2.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Clarified reusable-template and scenario boundaries. |
 | 0.1.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Initial reference architecture. |

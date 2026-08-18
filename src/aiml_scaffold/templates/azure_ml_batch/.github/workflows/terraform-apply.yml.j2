@@ -1,0 +1,295 @@
+name: Terraform apply
+on:
+  workflow_dispatch:
+    inputs:
+      plan_run_id:
+        description: Run ID of the reviewed Terraform plan workflow
+        required: true
+        type: string
+      plan_run_attempt:
+        description: Run attempt containing the reviewed plan artifact
+        required: true
+        default: "1"
+        type: string
+      reviewed_plan_digest:
+        description: Exact sha256 digest printed by the reviewed plan workflow
+        required: true
+        type: string
+      reviewed_json_digest:
+        description: Exact sha256 digest of the reviewed sanitized plan JSON
+        required: true
+        type: string
+      approval_reason:
+        description: Human-readable reason for authorizing this exact plan
+        required: true
+        type: string
+      confirm_environment:
+        description: Type APPLY_[[ environment | upper ]] to authorize this environment
+        required: true
+        type: string
+permissions:
+  id-token: write
+  contents: read
+  actions: read
+jobs:
+  apply:
+    environment: [[ environment ]]
+    runs-on: ubuntu-latest
+    env:
+      ARM_USE_OIDC: "true"
+      ARM_USE_AZUREAD: "true"
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+    steps:
+      - name: Download the reviewed plan artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: terraform-plan-[[ environment ]]-${{ inputs.plan_run_id }}-${{ inputs.plan_run_attempt }}
+          path: ${{ runner.temp }}/approved-plan
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.plan_run_id }}
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.11"
+      - id: approval
+        name: Verify manual authorization and immutable plan
+        env:
+          APPROVED_PLAN_DIR: ${{ runner.temp }}/approved-plan
+          EXPECTED_PLAN_RUN_ID: ${{ inputs.plan_run_id }}
+          EXPECTED_PLAN_RUN_ATTEMPT: ${{ inputs.plan_run_attempt }}
+          REVIEWED_PLAN_DIGEST: ${{ inputs.reviewed_plan_digest }}
+          REVIEWED_JSON_DIGEST: ${{ inputs.reviewed_json_digest }}
+          CONFIRM_ENVIRONMENT: ${{ inputs.confirm_environment }}
+          TARGET_ENVIRONMENT: "[[ environment ]]"
+          AUTHORIZED_ACTORS: ${{ vars.APPLY_AUTHORIZED_ACTORS }}
+        run: |
+          test "$CONFIRM_ENVIRONMENT" = "APPLY_[[ environment | upper ]]"
+          python - <<'PY'
+          import os
+          actors = {value.strip().lower() for value in os.environ["AUTHORIZED_ACTORS"].split(",") if value.strip()}
+          if not actors or os.environ["GITHUB_ACTOR"].lower() not in actors:
+              raise SystemExit("apply actor is not authorized for this environment")
+          PY
+          python scripts/plan_artifact.py verify \
+            --artifact-dir "$APPROVED_PLAN_DIR" \
+            --run-id "$EXPECTED_PLAN_RUN_ID" \
+            --run-attempt "$EXPECTED_PLAN_RUN_ATTEMPT" \
+            --environment "$TARGET_ENVIRONMENT" \
+            --plan-digest "$REVIEWED_PLAN_DIGEST" \
+            --json-digest "$REVIEWED_JSON_DIGEST" \
+            --tenant-id "$ARM_TENANT_ID" \
+            --subscription-id "$ARM_SUBSCRIPTION_ID" \
+            --github-output
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ steps.approval.outputs.source_commit }}
+      - name: Install provenance verifier dependency
+        run: python -m pip install -c constraints.txt pyyaml
+      - id: provenance
+        name: Verify checked-out generation provenance
+        run: python scripts/verify_generation.py --github-output
+      - name: Bind provenance to reviewed plan metadata
+        env:
+          ACTUAL_GENERATION_ID: ${{ steps.provenance.outputs.generation_id }}
+          ACTUAL_MANIFEST_DIGEST: ${{ steps.provenance.outputs.manifest_digest }}
+          ACTUAL_RESOLVED_PLAN_DIGEST: ${{ steps.provenance.outputs.resolved_plan_digest }}
+          EXPECTED_GENERATION_ID: ${{ steps.approval.outputs.generation_id }}
+          EXPECTED_MANIFEST_DIGEST: ${{ steps.approval.outputs.manifest_digest }}
+          EXPECTED_RESOLVED_PLAN_DIGEST: ${{ steps.approval.outputs.resolved_plan_digest }}
+        run: |
+          test "$ACTUAL_GENERATION_ID" = "$EXPECTED_GENERATION_ID"
+          test "$ACTUAL_MANIFEST_DIGEST" = "$EXPECTED_MANIFEST_DIGEST"
+          test "$ACTUAL_RESOLVED_PLAN_DIGEST" = "$EXPECTED_RESOLVED_PLAN_DIGEST"
+          python scripts/plan_artifact.py verify \
+            --artifact-dir "${{ runner.temp }}/approved-plan" \
+            --run-id "${{ inputs.plan_run_id }}" \
+            --run-attempt "${{ inputs.plan_run_attempt }}" \
+            --environment "[[ environment ]]" \
+            --plan-digest "${{ inputs.reviewed_plan_digest }}" \
+            --json-digest "${{ inputs.reviewed_json_digest }}" \
+            --tenant-id "$ARM_TENANT_ID" \
+            --subscription-id "$ARM_SUBSCRIPTION_ID" \
+            --project-root .
+      - name: Record authorization boundary
+        env:
+          PLAN_REQUESTED_BY: ${{ steps.approval.outputs.plan_requested_by }}
+          PLAN_DIGEST: ${{ steps.approval.outputs.plan_digest }}
+          APPROVAL_REASON: ${{ inputs.approval_reason }}
+        run: |
+          {
+            echo "### Digest-bound manual authorization"
+            echo "- Plan digest: \`$PLAN_DIGEST\`"
+            echo "- Plan requested by: \`$PLAN_REQUESTED_BY\`"
+            echo "- Apply authorized by: \`$GITHUB_ACTOR\`"
+            echo "- Approval reason: $APPROVAL_REASON"
+            echo "- Independent human reviewer: \`false\`"
+            echo "- Control: separate manual dispatch applying the reviewed artifact without replanning"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Verify active Azure context
+        run: |
+          test "$(az account show --query tenantId -o tsv | tr '[:upper:]' '[:lower:]')" = "${ARM_TENANT_ID,,}"
+          test "$(az account show --query id -o tsv | tr '[:upper:]' '[:lower:]')" = "${ARM_SUBSCRIPTION_ID,,}"
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_version: "1.10.0"
+      - run: terraform -chdir=infra/terraform init -backend-config=backend-[[ environment ]].hcl
+      - name: Verify backend state has not changed since plan
+        run: |
+          terraform -chdir=infra/terraform state pull > "${RUNNER_TEMP}/current-state.json"
+          python scripts/plan_artifact.py verify \
+            --artifact-dir "${{ runner.temp }}/approved-plan" \
+            --run-id "${{ inputs.plan_run_id }}" \
+            --run-attempt "${{ inputs.plan_run_attempt }}" \
+            --environment "[[ environment ]]" \
+            --plan-digest "${{ inputs.reviewed_plan_digest }}" \
+            --json-digest "${{ inputs.reviewed_json_digest }}" \
+            --tenant-id "$ARM_TENANT_ID" \
+            --subscription-id "$ARM_SUBSCRIPTION_ID" \
+            --current-state-snapshot "${RUNNER_TEMP}/current-state.json" \
+            --project-root .
+          rm -f "${RUNNER_TEMP}/current-state.json"
+      - id: authorization_evidence
+        name: Preserve pre-apply authorization evidence
+        env:
+          APPROVAL_REASON: ${{ inputs.approval_reason }}
+          GENERATION_ID: ${{ steps.approval.outputs.generation_id }}
+          PLATFORM_SOURCE_COMMIT: ${{ steps.approval.outputs.platform_source_commit }}
+          PLATFORM_PACKAGE_DIGEST: ${{ steps.approval.outputs.platform_package_digest }}
+          PLAN_DIGEST: ${{ steps.approval.outputs.plan_digest }}
+          JSON_DIGEST: ${{ steps.approval.outputs.json_digest }}
+          PLAN_RUN_ID: ${{ inputs.plan_run_id }}
+          PLAN_RUN_ATTEMPT: ${{ inputs.plan_run_attempt }}
+        run: |
+          mkdir -p "${RUNNER_TEMP}/apply-evidence"
+          started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "started_at=$started_at" >> "$GITHUB_OUTPUT"
+          export STARTED_AT="$started_at"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          payload = {
+              "schema_version": "1.0",
+              "environment": "[[ environment ]]",
+              "generation_id": os.environ["GENERATION_ID"],
+              "platform_source_commit": os.environ["PLATFORM_SOURCE_COMMIT"],
+              "platform_package_digest": os.environ["PLATFORM_PACKAGE_DIGEST"],
+              "plan_run_id": os.environ["PLAN_RUN_ID"],
+              "plan_run_attempt": os.environ["PLAN_RUN_ATTEMPT"],
+              "terraform_plan_digest": os.environ["PLAN_DIGEST"],
+              "sanitized_plan_digest": os.environ["JSON_DIGEST"],
+              "apply_run_id": os.environ["GITHUB_RUN_ID"],
+              "apply_run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+              "authorized_by": os.environ["GITHUB_ACTOR"],
+              "approval_reason": os.environ["APPROVAL_REASON"],
+              "started_at": os.environ["STARTED_AT"],
+              "outcome": "started",
+          }
+          Path(os.environ["RUNNER_TEMP"], "apply-evidence", "apply-authorization-and-result.json").write_text(
+              json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+          )
+          PY
+      - id: apply
+        name: Apply reviewed plan
+        continue-on-error: true
+        run: terraform -chdir=infra/terraform apply -auto-approve "${{ runner.temp }}/approved-plan/r1.tfplan"
+      - name: Finalize apply authorization evidence
+        if: always()
+        env:
+          APPLY_OUTCOME: ${{ steps.apply.outcome }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from datetime import UTC, datetime
+          from pathlib import Path
+          path = Path(os.environ["RUNNER_TEMP"], "apply-evidence", "apply-authorization-and-result.json")
+          payload = json.loads(path.read_text(encoding="utf-8"))
+          payload["outcome"] = os.environ["APPLY_OUTCOME"]
+          payload["completed_at"] = datetime.now(UTC).isoformat()
+          path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          PY
+      - name: Upload apply authorization and result evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: terraform-apply-evidence-[[ environment ]]-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/apply-evidence/apply-authorization-and-result.json
+          if-no-files-found: error
+          retention-days: 90
+      - id: outputs
+        if: always()
+        run: |
+          echo "storage=$(terraform -chdir=infra/terraform output -raw storage_account_name)" >> "$GITHUB_OUTPUT"
+          echo "workspace=$(terraform -chdir=infra/terraform output -raw workspace_name)" >> "$GITHUB_OUTPUT"
+      - name: Verify applied identity and RBAC graph
+        if: steps.apply.outcome == 'success'
+        run: |
+          workspace_principal=$(terraform -chdir=infra/terraform output -raw workspace_identity_principal_id)
+{% if compute_identity_required %}
+          compute_identity_id=$(terraform -chdir=infra/terraform output -raw compute_identity_id)
+          compute_principal=$(terraform -chdir=infra/terraform output -raw compute_identity_principal_id)
+          compute_role_id=$(terraform -chdir=infra/terraform output -raw compute_storage_role_assignment_id)
+{% endif %}
+          workflow_role_id=$(terraform -chdir=infra/terraform output -raw workflow_storage_role_assignment_id)
+          resource_group_id=$(terraform -chdir=infra/terraform output -raw resource_group_id)
+
+          actual_workspace_principal=$(az resource show \
+            --ids "${resource_group_id}/providers/Microsoft.MachineLearningServices/workspaces/${{ steps.outputs.outputs.workspace }}" \
+            --api-version 2025-06-01 --query identity.principalId -o tsv)
+{% if compute_identity_required %}
+          actual_compute_principal=$(az resource show \
+            --ids "$compute_identity_id" --api-version 2023-01-31 \
+            --query properties.principalId -o tsv)
+{% endif %}
+          test "${actual_workspace_principal,,}" = "${workspace_principal,,}"
+{% if compute_identity_required %}
+          test "${actual_compute_principal,,}" = "${compute_principal,,}"
+          test "$(az role assignment list --all --query "[?id=='$compute_role_id' && roleDefinitionName=='Storage Blob Data Contributor'] | length(@)" -o tsv)" = "1"
+{% endif %}
+          test "$(az role assignment list --all --query "[?id=='$workflow_role_id' && roleDefinitionName=='Storage Blob Data Contributor'] | length(@)" -o tsv)" = "1"
+          test "$(az role assignment list --assignee-object-id "$workspace_principal" --scope "$resource_group_id" --role "Azure AI Administrator" --query 'length(@)' -o tsv)" = "1"
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        if: always() && steps.outputs.outputs.storage != ''
+        with:
+          python-version: "3.11"
+      - name: Install evidence client
+        if: always() && steps.outputs.outputs.storage != ''
+        run: python -m pip install azure-identity==1.19.0 azure-storage-blob==12.24.1
+      - name: Record infrastructure evidence
+        if: always() && steps.outputs.outputs.storage != ''
+        run: |
+          metadata=$(python -c 'import json,os; print(json.dumps({"generation_id":os.environ["GENERATION_ID"],"platform_source_commit":os.environ["PLATFORM_SOURCE_COMMIT"],"platform_package_digest":os.environ["PLATFORM_PACKAGE_DIGEST"],"plan_run_id":os.environ["PLAN_RUN_ID"],"plan_run_attempt":os.environ["PLAN_RUN_ATTEMPT"],"terraform_plan_digest":os.environ["PLAN_DIGEST"],"sanitized_plan_digest":os.environ["JSON_DIGEST"],"approval_actor":os.environ["GITHUB_ACTOR"],"apply_run_id":os.environ["GITHUB_RUN_ID"]},sort_keys=True))')
+          python scripts/emit_evidence.py \
+            --storage-account "${{ steps.outputs.outputs.storage }}" \
+            --operation-id "infra-${{ github.run_id }}" \
+            --provider terraform --capability infrastructure --operation apply \
+            --state started --source-run-id "${{ github.run_id }}" --source-sequence 0 \
+            --occurred-at "${{ steps.authorization_evidence.outputs.started_at }}" \
+            --metadata "$metadata" \
+            --artifact "github_plan_run=https://github.com/${GITHUB_REPOSITORY}/actions/runs/${{ inputs.plan_run_id }}"
+          python scripts/emit_evidence.py \
+            --storage-account "${{ steps.outputs.outputs.storage }}" \
+            --operation-id "infra-${{ github.run_id }}" \
+            --provider terraform --capability infrastructure --operation apply \
+            --state "${{ steps.apply.outcome == 'success' && 'succeeded' || 'failed' }}" \
+            --source-run-id "${{ github.run_id }}" --source-sequence 1 \
+            --metadata "$metadata" \
+            --artifact "github_plan_run=https://github.com/${GITHUB_REPOSITORY}/actions/runs/${{ inputs.plan_run_id }}" \
+            --artifact "azure_ml_workspace=azureml://workspaces/${{ steps.outputs.outputs.workspace }}"
+        env:
+          GENERATION_ID: ${{ steps.approval.outputs.generation_id }}
+          PLATFORM_SOURCE_COMMIT: ${{ steps.approval.outputs.platform_source_commit }}
+          PLATFORM_PACKAGE_DIGEST: ${{ steps.approval.outputs.platform_package_digest }}
+          PLAN_RUN_ID: ${{ inputs.plan_run_id }}
+          PLAN_RUN_ATTEMPT: ${{ inputs.plan_run_attempt }}
+          PLAN_DIGEST: ${{ steps.approval.outputs.plan_digest }}
+          JSON_DIGEST: ${{ steps.approval.outputs.json_digest }}
+      - name: Fail unsuccessful apply
+        if: steps.apply.outcome != 'success'
+        run: exit 1

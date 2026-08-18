@@ -1,17 +1,18 @@
 # Interview demo flow
 
-1. Show the environment-specific catalog and Bronze/Silver/Gold lineage.
-2. Show the corpus quality and class-balance report.
-3. Run training and open the MLflow run lineage.
-4. Register a challenger and show automated validation gates.
-5. Show the approval boundary before champion promotion.
-6. Show the serving endpoint and the independent served/champion versions.
-7. Open a customer drill-down with score, drivers, and 30-day change.
-8. Invoke the Foundry grounded agent and inspect citations and recommended playbook action.
-9. Show GitHub Actions, Bicep/DAB validation, deployment evidence, and monitoring signals.
+1. Validate a non-scenario-specific ML manifest.
+2. Show the resolved providers, defaults, approvals, ownership, and resource cost classes.
+3. Generate two repositories and compare their receipts and byte-identical trees.
+4. Show Terraform ownership, scale-to-zero compute, and the private evidence container.
+5. Show the explicit champion metric and winning/losing promotion decisions.
+6. Show that losing evaluation does not register a model.
+7. Show the explicit model version in batch deployment and invocation evidence.
+8. Project the operation timeline from normalized events and receipts.
+9. Distinguish local/static results from the separately captured Dev clean-room evidence.
 
 ## Documentation changelog
 
 | Version | Created | Modified | Who | Notes |
 |---|---|---|---|---|
+| 1.0.0-rc1 | 2026-08-07 | 2026-08-11 | Ray Swan / Codex | Replaced the legacy scenario demo with the R1 executable factory evidence flow. |
 | 0.1.0 | 2026-08-07 | 2026-08-07 | Ray Swan / Codex | Initial interview demonstration flow. |

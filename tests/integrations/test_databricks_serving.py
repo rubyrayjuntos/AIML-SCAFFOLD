@@ -1,6 +1,6 @@
 from platform_core.contracts.models import ScoreResponse
-from platform_core.integrations.databricks_serving import DatabricksServingAdapter
 from platform_core.settings.config import Settings
+from scenarios.churn.databricks_serving import DatabricksServingAdapter
 
 
 class FakeWorkspace:
@@ -28,7 +28,13 @@ class FakeWorkspace:
 def test_adapter_returns_authoritative_score_and_versions() -> None:
     result = DatabricksServingAdapter(
         workspace=FakeWorkspace(),
-        settings=Settings(databricks_sql_warehouse_id="warehouse-1"),
+        settings=Settings(
+            databricks_sql_warehouse_id="warehouse-1",
+            model_serving_endpoint="churn-model-endpoint",
+            databricks_catalog="mlworkflow_dev",
+            feature_schema_version="churn.features.v1",
+            feature_contract="churn_feature_contract_v1",
+        ),
     ).score("7590-VHVEG", "request-1")
 
     assert isinstance(result, ScoreResponse)

@@ -22,4 +22,22 @@ def test_endpoint_and_promotion_policy_are_canonical() -> None:
     assert manifest["serving"]["endpoint"] == "churn-model-endpoint"
     assert config["model"]["primary_metric"] == "auc"
     assert config["model"]["minimum_improvement"] == 0.02
-    assert Settings().model_serving_endpoint == "churn-model-endpoint"
+    assert Settings.from_scenario(Path("src/scenarios/churn")).model_serving_endpoint == (
+        "churn-model-endpoint"
+    )
+
+
+def test_retrieval_config_is_canonical() -> None:
+    config = yaml.safe_load(Path("src/scenarios/churn/config.yaml").read_text())
+    manifest = yaml.safe_load(Path("src/scenarios/churn/scenario.yaml").read_text())
+    assert manifest["retrieval"]["endpoint"] == "churn-retrieval-endpoint"
+    assert manifest["retrieval"]["vector_indexes"] == ["notes_vs", "tickets_vs", "playbooks_vs"]
+    assert config["notes_table"] == "gold.customer_notes"
+    assert config["tickets_table"] == "gold.support_tickets"
+    assert config["playbooks_table"] == "gold.recommended_actions"
+
+    settings = Settings.from_scenario(Path("src/scenarios/churn"))
+    assert settings.vector_search_endpoint == "churn-retrieval-endpoint"
+    assert settings.notes_table == "gold.customer_notes"
+    assert settings.tickets_table == "gold.support_tickets"
+    assert settings.playbooks_table == "gold.recommended_actions"
