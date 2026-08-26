@@ -1,4 +1,18 @@
 {
+	"inputs": [
+		{
+			"id": "ado_org",
+			"type": "promptString",
+			"description": "Azure DevOps organization name.",
+			"password": false
+		},
+		{
+			"id": "ado_domain",
+			"type": "promptString",
+			"description": "Azure DevOps domains/toolsets to enable.",
+			"password": false
+		}
+	],
 	"servers": {
 		"com.microsoft/azure": {
 			"type": "stdio",
@@ -12,10 +26,6 @@
 			],
 			"gallery": "https://api.mcp.github.com",
 			"version": "3.0.0-beta.6"
-		},
-		"foundry-mcp-remote": {
-			"type": "http",
-			"url": "https://mcp.ai.azure.com"
 		},
 		"oraios/serena": {
 			"type": "stdio",
@@ -42,19 +52,5 @@
 				"${input:ado_domain}"
 			]
 		}
-	},
-	"inputs": [
-		{
-			"id": "ado_org",
-			"type": "promptString",
-			"description": "Azure DevOps organization name.",
-			"password": false
-		},
-		{
-			"id": "ado_domain",
-			"type": "promptString",
-			"description": "Azure DevOps domains/toolsets to enable.",
-			"password": false
-		}
-	]
+	}
 }
